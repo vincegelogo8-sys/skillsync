@@ -66,8 +66,7 @@ class ProposalExtractionService
             report($exception);
 
             throw ValidationException::withMessages([
-                'extraction' =>
-                    'Document text could not be saved. '
+                'extraction' => 'Document text could not be saved. '
                     .'Your uploaded file is preserved. '
                     .'Please retry from the proposal page.',
             ]);
@@ -85,8 +84,7 @@ class ProposalExtractionService
      * The previous analysis is replaced only when the
      * new extraction succeeds.
      *
-     * Existing generated recommendation scores are removed
-     * because they were based on the previous extraction.
+     * The controller recalculates existing recommendations in the same transaction.
      */
     public function refresh(
         ResearchProposal $proposal
@@ -124,8 +122,7 @@ class ProposalExtractionService
             report($exception);
 
             throw ValidationException::withMessages([
-                'extraction' =>
-                    'The proposal could not be re-extracted. '
+                'extraction' => 'The proposal could not be re-extracted. '
                     .'Your uploaded document and previous analysis were preserved.',
             ]);
         }
@@ -141,19 +138,11 @@ class ProposalExtractionService
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                /*
-                 * Old recommendations are no longer valid because
-                 * they were calculated using the previous text.
-                 */
-                $proposal->recommendations()->delete();
+                $analysis = $proposal->analysis()->first() ?? $proposal->analysis()->make();
 
-                /*
-                 * Delete the old analysis only after the new
-                 * extraction has succeeded.
-                 */
-                $proposal->analysis()->delete();
-
-                $analysis = $proposal->analysis()->make();
+                foreach (['keywords', 'project_type', 'technologies', 'identified_expertise_areas'] as $field) {
+                    $analysis->{$field} = null;
+                }
 
                 $analysis->extracted_text = $text;
 
@@ -177,8 +166,7 @@ class ProposalExtractionService
             report($exception);
 
             throw ValidationException::withMessages([
-                'extraction' =>
-                    'The refreshed extraction could not be saved. '
+                'extraction' => 'The refreshed extraction could not be saved. '
                     .'Please try again.',
             ]);
         }

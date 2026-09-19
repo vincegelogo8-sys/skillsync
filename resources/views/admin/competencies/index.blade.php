@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Research Advising Competency') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Research Advising Competency') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Review faculty research advising competency evaluations.') }}</x-slot>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
@@ -24,7 +25,7 @@
                             @endif
                         </article>
                     @empty
-                        <p class="py-4 text-sm text-gray-600">{{ __('No faculty accounts yet.') }}</p>
+                        <x-empty-state title="{{ __('No faculty accounts yet.') }}" />
                     @endforelse
                 </div>
                 <div class="mt-4">{{ $faculty->links() }}</div>

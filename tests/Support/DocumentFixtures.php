@@ -7,7 +7,7 @@ use PhpOffice\PhpWord\PhpWord;
 
 class DocumentFixtures
 {
-    public static function pdf(array $lines = ['Research proposal using Laravel and MySQL', 'C++ C# .NET Node.js API SQL']): string
+    public static function pdf(array $lines = ['Objectives:', 'Research proposal using Laravel and MySQL', 'C++ C# .NET Node.js API SQL']): string
     {
         $stream = "BT /F1 12 Tf 14 TL 50 750 Td\n";
         foreach ($lines as $line) {
@@ -42,6 +42,7 @@ class DocumentFixtures
         $word->addTitleStyle(1, ['bold' => true]);
         $section = $word->addSection();
         if (! $empty) {
+            $section->addText('Objectives:');
             $section->addTitle('Research Heading', 1);
             $run = $section->addTextRun();
             $run->addText('Laravel ');

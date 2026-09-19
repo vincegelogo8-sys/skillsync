@@ -1,16 +1,22 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">{{ __('Skills Assessment') }} #{{ $attempt->id }}</h2></x-slot>
+    <x-slot name="header"><h1 class="font-semibold text-xl text-gray-800">{{ __('Skills Assessment') }} #{{ $attempt->id }}</h1></x-slot>
+    <x-slot name="description">{{ __('Review each question carefully and select one answer per question.') }}</x-slot>
     <div class="py-12"><div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
         @if ($attempt->completed_at)
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                 <h3 class="text-lg font-medium text-gray-900">{{ __('Assessment completed') }}</h3>
-                <p role="status" class="mt-4 text-2xl font-semibold text-gray-900">{{ $attempt->score }}/10 — {{ $attempt->percentage }}%</p>
+                <p role="status" class="ui-alert mt-4 text-2xl font-semibold text-gray-900">{{ $attempt->score }}/10 — {{ $attempt->percentage }}%</p>
                 <p class="mt-2 text-sm text-gray-600">{{ __('Completed') }}: {{ $attempt->completed_at->format('Y-m-d H:i T') }}</p>
-                <a href="{{ route('faculty.assessment.index') }}" class="mt-4 inline-block text-indigo-600 underline">{{ __('Back to assessment history') }}</a>
+                <a href="{{ route('faculty.assessment.index') }}" class="mt-4 inline-block button button-secondary">{{ __('Back to assessment history') }}</a>
             </section>
         @else
-            <form method="POST" action="{{ route('faculty.assessment.submit', $attempt) }}" class="space-y-6">
+            <form method="POST" action="{{ route('faculty.assessment.submit', $attempt) }}" class="space-y-6" data-assessment-form>
                 @csrf
+                <div class="assessment-progress">
+                    <p class="font-semibold text-indigo-900">{{ __('Your progress') }}</p>
+                    <p class="text-sm text-indigo-900"><span data-answered-count>0</span> / {{ count($items) }} {{ __('answered') }}</p>
+                    <progress class="score-meter" data-assessment-progress value="0" max="{{ count($items) }}" aria-label="{{ __('Questions answered') }}"></progress>
+                </div>
                 <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                     <p class="text-sm text-gray-600">{{ __('Select one answer for every question, then submit. Your answers become final when submitted.') }}</p>
                     <p class="mt-2 text-sm text-gray-600">{{ __('Answers are not saved until submission. Keep this page open while answering.') }}</p>
@@ -18,6 +24,7 @@
                 </section>
                 @foreach ($items as $item)
                     <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
+                        <p class="question-number">{{ __('Question :number of :total', ['number' => $item->position, 'total' => count($items)]) }}</p>
                         <fieldset>
                             <legend class="font-medium text-gray-900 whitespace-pre-wrap break-words">{{ $item->position }}. {{ $item->question }}</legend>
                             <div class="mt-4 space-y-3">

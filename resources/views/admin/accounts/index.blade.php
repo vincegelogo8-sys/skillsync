@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Student and Faculty Accounts') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Student and Faculty Accounts') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Manage access for Student and Faculty accounts.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -11,7 +12,7 @@
                 </a>
 
                 @if (session('status'))
-                    <p role="status" class="text-sm font-medium text-green-700">{{ session('status') }}</p>
+                    <p role="status" class="ui-alert text-sm font-medium text-green-700">{{ session('status') }}</p>
                 @endif
 
                 <div class="overflow-x-auto">

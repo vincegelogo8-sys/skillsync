@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Profile') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Profile') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Manage your personal information and access your advising profile.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -17,24 +18,19 @@
                     </a>
 
                     @if (session('status') === 'faculty-profile-updated')
-                        <p role="status" class="mt-4 text-sm font-medium text-green-700">
+                        <p role="status" class="ui-alert mt-4 text-sm font-medium text-green-700">
                             {{ __('Faculty profile saved successfully.') }}
                         </p>
                     @endif
 
                     @if (session('status') === 'complete-profile-for-expertise')
-                        <p role="status" class="mt-4 text-sm font-medium text-amber-800">
+                        <p role="status" class="ui-alert mt-4 text-sm font-medium text-amber-800">
                             {{ __('Save your full name and department before adding research expertise.') }}
                         </p>
                     @endif
 
-                    @if ($profile)
-                        <p class="mt-4"><a href="{{ route('faculty.expertise.index') }}" class="text-sm text-indigo-600 underline">{{ __('Manage Research Expertise') }}</a></p>
-                        <p class="mt-4"><a href="{{ route('faculty.preferences.index') }}" class="text-sm text-indigo-600 underline">{{ __('Manage Faculty Preferences') }}</a></p>
-                    @endif
-
                     @if (session('status') === 'complete-profile-for-preferences')
-                        <p role="status" class="mt-4 text-sm font-medium text-amber-800">
+                        <p role="status" class="ui-alert mt-4 text-sm font-medium text-amber-800">
                             {{ __('Save your full name and department before selecting preferences.') }}
                         </p>
                     @endif
@@ -45,7 +41,7 @@
                     @endphp
 
                     @if (session('status') === 'complete-profile-for-assessment')
-                        <p role="status" class="mt-4 text-sm text-amber-800">{{ __('Save your full name and department before taking the skills assessment.') }}</p>
+                        <p role="status" class="ui-alert mt-4 text-sm text-amber-800">{{ __('Save your full name and department before taking the skills assessment.') }}</p>
                     @endif
 
                     <form method="POST" action="{{ route('faculty.profile.update') }}" class="mt-6 space-y-6">
@@ -72,6 +68,14 @@
                     </form>
                 </div>
             </section>
+            @if ($profile)
+                <nav class="profile-links" aria-label="{{ __('Faculty profile sections') }}">
+                    <a href="{{ route('faculty.expertise.index') }}">{{ __('Research Expertise') }}<small>{{ __('Manage expertise areas and proficiency.') }}</small></a>
+                    <a href="{{ route('faculty.preferences.index') }}">{{ __('Faculty Preferences') }}<small>{{ __('Choose project types and technologies.') }}</small></a>
+                    <a href="{{ route('faculty.assessment.index') }}">{{ __('Skills Assessment') }}<small>{{ __('Continue an assessment or review results.') }}</small></a>
+                    <a href="{{ route('faculty.assignments.index') }}">{{ __('Assigned Students') }}<small>{{ __('Review your current adviser assignments.') }}</small></a>
+                </nav>
+            @endif
         </div>
     </div>
 </x-app-layout>

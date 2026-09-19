@@ -7,6 +7,7 @@ use App\Models\ResearchProposal;
 use App\Models\User;
 use App\Services\ProposalAnalysisService;
 use App\Services\ProposalExtractionService;
+use App\Services\RecommendationService;
 use App\Services\ResearchProposalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,11 +40,9 @@ class ResearchProposalController extends Controller
                 ->researchProposals();
 
         return view('student.proposal.index', [
-            'proposals' =>
-                $query->latest('id')->paginate(15),
+            'proposals' => $query->latest('id')->paginate(15),
 
-            'admin' =>
-                $admin,
+            'admin' => $admin,
         ]);
     }
 
@@ -124,11 +123,9 @@ class ResearchProposalController extends Controller
         return view(
             'student.proposal.show',
             [
-                'proposal' =>
-                    $proposal,
+                'proposal' => $proposal,
 
-                'admin' =>
-                    $request->user()->role
+                'admin' => $request->user()->role
                     === User::ROLE_ADMIN,
             ]
         );
@@ -181,7 +178,8 @@ class ResearchProposalController extends Controller
         Request $request,
         ResearchProposal $proposal,
         ProposalExtractionService $extractor,
-        ProposalAnalysisService $analyzer
+        ProposalAnalysisService $analyzer,
+        RecommendationService $recommendations
     ): RedirectResponse {
         $this->authorizeAccess(
             $request,
@@ -189,22 +187,27 @@ class ResearchProposalController extends Controller
         );
 
         try {
-            $refreshed = $extractor->refresh(
-                $proposal
-            );
+            DB::transaction(function () use ($request, $proposal, $extractor, $analyzer, $recommendations) {
+                $proposal = ResearchProposal::whereKey($proposal->id)->lockForUpdate()->firstOrFail();
+                $hasRecommendations = $proposal->recommendations()->exists();
+                $refreshed = $extractor->refresh($proposal);
 
-            /*
-             * Only rerun analysis if the refreshed extraction
-             * actually succeeded.
-             */
-            if (
-                $refreshed->status === 'extracted'
-                && $refreshed->analysis
-            ) {
-                $analyzer->analyze(
-                    $refreshed
-                );
-            }
+                if ($refreshed->status === 'extracted' && $refreshed->analysis) {
+                    $analyzer->analyze($refreshed);
+                    if ($hasRecommendations) {
+                        try {
+                            $recommendations->generate($refreshed, $request->user());
+                        } catch (ValidationException $exception) {
+                            throw $exception;
+                        } catch (Throwable $exception) {
+                            report($exception);
+                            throw ValidationException::withMessages([
+                                'analysis' => 'Recommendations could not be recalculated. The previous extraction and results were preserved. Please retry.',
+                            ]);
+                        }
+                    }
+                }
+            });
         } catch (ValidationException $exception) {
             return redirect()
                 ->route(
@@ -310,14 +313,11 @@ class ResearchProposalController extends Controller
             $proposal->file_path,
             $proposal->original_filename,
             [
-                'Content-Type' =>
-                    'application/octet-stream',
+                'Content-Type' => 'application/octet-stream',
 
-                'X-Content-Type-Options' =>
-                    'nosniff',
+                'X-Content-Type-Options' => 'nosniff',
 
-                'Cache-Control' =>
-                    'private, no-store',
+                'Cache-Control' => 'private, no-store',
             ]
         );
     }
@@ -362,8 +362,7 @@ class ResearchProposalController extends Controller
                     $proposal
                 )
                 ->withErrors([
-                    'delete' =>
-                        'This proposal cannot be deleted because '
+                    'delete' => 'This proposal cannot be deleted because '
                         .'it already has an adviser assignment.',
                 ]);
         }
@@ -397,8 +396,7 @@ class ResearchProposalController extends Controller
                             ->exists()
                     ) {
                         throw ValidationException::withMessages([
-                            'delete' =>
-                                'This proposal cannot be deleted because '
+                            'delete' => 'This proposal cannot be deleted because '
                                 .'it already has an adviser assignment.',
                         ]);
                     }
@@ -441,8 +439,7 @@ class ResearchProposalController extends Controller
                     $proposal
                 )
                 ->withErrors([
-                    'delete' =>
-                        'The proposal could not be deleted. '
+                    'delete' => 'The proposal could not be deleted. '
                         .'Please try again.',
                 ]);
         }
@@ -472,8 +469,7 @@ class ResearchProposalController extends Controller
         );
     }
 
-    private function completeProfile():
-        RedirectResponse
+    private function completeProfile(): RedirectResponse
     {
         return redirect()
             ->route(

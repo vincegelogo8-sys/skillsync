@@ -1,5 +1,6 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">{{ __('Skills Assessment Results') }}</h2></x-slot>
+    <x-slot name="header"><h1 class="font-semibold text-xl text-gray-800">{{ __('Skills Assessment Results') }}</h1></x-slot>
+    <x-slot name="description">{{ __('Review completed faculty assessments and recorded scores.') }}</x-slot>
     <div class="py-12"><div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
             <p class="text-sm text-gray-600">{{ __('Completed faculty assessments, newest first.') }}</p>
@@ -13,7 +14,7 @@
                         <p class="font-medium text-gray-900">{{ $attempt->score }}/10 — {{ $attempt->percentage }}%</p>
                     </article>
                 @empty
-                    <p class="py-4 text-gray-600">{{ __('No completed assessments yet.') }}</p>
+                    <x-empty-state title="{{ __('No completed assessments yet.') }}" />
                 @endforelse
             </div>
             <div class="mt-4">{{ $attempts->links() }}</div>

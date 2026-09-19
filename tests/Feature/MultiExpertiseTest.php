@@ -85,7 +85,7 @@ class MultiExpertiseTest extends TestCase
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Web Application', 'file_path' => 'step13.pdf', 'original_filename' => 'step13.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Web development with Laravel and MySQL database management.';
+        $analysis->extracted_text = 'Objectives: Web development with Laravel and MySQL database management.';
         $analysis->save();
         $analysis = app(ProposalAnalysisService::class)->analyze($proposal);
         $this->assertSame(['Web Development', 'Database Systems'], $analysis->identified_expertise_areas);

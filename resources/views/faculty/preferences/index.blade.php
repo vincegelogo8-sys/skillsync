@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Preferences') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Preferences') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Choose the project types and technologies you prefer to advise.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -14,7 +15,7 @@
                     <p class="mt-2 text-sm text-gray-600">{{ __('Choose the project types and technologies you prefer working with. You may select multiple options in either list.') }}</p>
                     <p class="mt-2 text-sm text-gray-600">{{ __('Uncheck an option and save to remove it. Saving with no selections clears your preferences.') }}</p>
                     @if (session('status') === 'faculty-preferences-updated')
-                        <p role="status" class="mt-4 text-sm font-medium text-green-700">{{ __('Faculty preferences saved successfully.') }}</p>
+                        <p role="status" class="ui-alert mt-4 text-sm font-medium text-green-700">{{ __('Faculty preferences saved successfully.') }}</p>
                     @endif
                     @if ($errors->any())
                         <div role="alert" class="mt-4 text-sm text-red-700">
@@ -39,6 +40,13 @@
                     <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                         <fieldset>
                             <legend class="text-lg font-medium text-gray-900">{{ __($group['label']) }}</legend>
+                            <div class="mt-3 flex flex-wrap gap-2" aria-label="{{ __('Saved preferences') }}">
+                                @forelse ($group['saved'] as $savedPreference)
+                                    <span class="status-badge badge-neutral">{{ $savedPreference }}</span>
+                                @empty
+                                    <p class="text-xs text-gray-500">{{ __('No saved selections in this category.') }}</p>
+                                @endforelse
+                            </div>
                             <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 @foreach ($group['options'] as $option)
                                     <label for="{{ $group['field'] }}_{{ $loop->index }}" class="flex items-start gap-3 rounded-md border border-gray-200 p-3 text-sm text-gray-800 cursor-pointer hover:bg-gray-50">

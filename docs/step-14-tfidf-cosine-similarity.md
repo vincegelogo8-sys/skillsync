@@ -17,10 +17,9 @@ Complete source:
 ## Inputs and normalization
 
 `forProposal($analysis, $faculties)` requires completed proposal analysis and saved
-faculty profiles. It uses the saved authoritative title plus the extracted text.
-The abstract and extracted keywords are not appended again because their content
-already appears in the document. A title repeated in the original document does
-contribute additional term frequency.
+faculty profiles. Both similarity entry points now use only the authoritative stored
+title plus extracted objectives from ProposalSectionExtractor. Full extracted text,
+abstracts, and keyword lists are not appended. See [Title and objectives analysis](proposal-title-objectives.md).
 
 Each faculty document contains its current expertise names once. One database
 query retrieves expertise for all supplied faculty IDs, avoiding stale preloaded

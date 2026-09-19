@@ -10,6 +10,7 @@
     <body class="guest-page antialiased">
         <main class="login-card">
             <a href="{{ url('/') }}" class="guest-brand"><x-application-logo /> <span>SKILLSYNC</span></a>
+            <p class="guest-caption">{{ __('Research Adviser Recommendation System') }}</p>
             {{ $slot }}
         </main>
     </body>

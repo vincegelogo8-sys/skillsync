@@ -1,15 +1,16 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Research Advising Competency Evaluation') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Research Advising Competency Evaluation') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Evaluate the five advising dimensions using the existing rating rubric.') }}</x-slot>
     <div class="py-12">
         <div class="max-w-7xl mx-auto space-y-6 sm:px-6 lg:px-8">
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                <a href="{{ route('admin.competencies.index') }}" class="text-sm text-indigo-600 underline">{{ __('Back to faculty evaluations') }}</a>
+                <a href="{{ route('admin.competencies.index') }}" class=" button button-secondary">{{ __('Back to faculty evaluations') }}</a>
                 <h3 class="mt-4 text-lg font-medium text-gray-900">{{ $profile->user->name }}</h3>
                 <p class="text-sm text-gray-600">{{ $profile->department }}</p>
                 @if (session('status') === 'competency-saved')
-                    <p role="status" class="mt-4 text-sm font-medium text-green-700">{{ __('Competency evaluation saved successfully.') }}</p>
+                    <p role="status" class="ui-alert mt-4 text-sm font-medium text-green-700">{{ __('Competency evaluation saved successfully.') }}</p>
                 @endif
                 @if ($competency)
                     <p class="mt-4 font-medium text-gray-900">{{ __('Saved competency score') }}: {{ number_format($score, 2) }}%</p>
@@ -59,7 +60,7 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-4">
                             <x-primary-button>{{ __('Save Evaluation') }}</x-primary-button>
-                            <a href="{{ route('admin.competencies.index') }}" class="text-sm text-gray-600 underline">{{ __('Cancel') }}</a>
+                            <a href="{{ route('admin.competencies.index') }}" class=" button button-secondary">{{ __('Cancel') }}</a>
                         </div>
                     </form>
                 </div>

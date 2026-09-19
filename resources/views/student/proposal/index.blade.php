@@ -1,10 +1,11 @@
 <x-app-layout>
 
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">
+        <h1 class="font-semibold text-xl text-gray-800">
             {{ __('Research Proposals') }}
-        </h2>
+        </h1>
     </x-slot>
+    <x-slot name="description">{{ __('Manage research proposals and follow their progress toward adviser assignment.') }}</x-slot>
 
     <div class="py-12">
 
@@ -24,7 +25,7 @@
                     @unless ($admin)
                         <a
                             href="{{ route('student.proposals.create') }}"
-                            class="text-indigo-600 underline"
+                            class=" button button-primary"
                         >
                             {{ __('Upload Proposal') }}
                         </a>
@@ -36,7 +37,7 @@
                 @if (session('status') === 'proposal-deleted')
                     <div
                         role="status"
-                        class="mt-6 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
+                        class="ui-alert mt-6 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
                     >
                         {{ __('Research proposal deleted successfully.') }}
                     </div>
@@ -75,7 +76,7 @@
 
                                 <p class="mt-1 text-xs text-gray-500">
                                     {{ __('Status') }}:
-                                    {{ ucfirst(str_replace('_', ' ', $proposal->status)) }}
+                                    <x-status-badge :status="$proposal->status" />
                                 </p>
 
                             </div>
@@ -85,7 +86,7 @@
 
                                 <a
                                     href="{{ route(($admin ? 'admin' : 'student').'.proposals.show', $proposal) }}"
-                                    class="text-sm text-indigo-600 underline"
+                                    class=" button button-secondary"
                                 >
                                     {{ __('View proposal') }}
                                     #{{ $proposal->id }}
@@ -104,7 +105,7 @@
 
                                         <button
                                             type="submit"
-                                            class="text-sm text-red-600 underline hover:text-red-800"
+                                            class="button button-danger"
                                         >
                                             {{ __('Delete') }}
                                         </button>
@@ -118,9 +119,7 @@
 
                     @empty
 
-                        <p class="py-4 text-sm text-gray-600">
-                            {{ __('No research proposals uploaded yet.') }}
-                        </p>
+                        <x-empty-state title="{{ __('No research proposals uploaded yet.') }}" />
 
                     @endforelse
 

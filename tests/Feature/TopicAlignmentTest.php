@@ -62,7 +62,7 @@ class TopicAlignmentTest extends TestCase
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Web Development', 'file_path' => 'step15.pdf', 'original_filename' => 'step15.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Web development with Laravel and MySQL database management.';
+        $analysis->extracted_text = 'Objectives: Web development with Laravel and MySQL database management.';
         $analysis->save();
 
         return app(ProposalAnalysisService::class)->analyze($proposal);

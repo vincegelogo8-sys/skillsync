@@ -97,7 +97,7 @@ class AdviserAssignmentTest extends TestCase
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Proposal '.$student->id, 'file_path' => 'private-'.$student->id.'.pdf', 'original_filename' => 'proposal.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Web application using Laravel.';
+        $analysis->extracted_text = 'Objectives: Web application using Laravel.';
         $analysis->save();
         app(ProposalAnalysisService::class)->analyze($proposal);
         app(RecommendationService::class)->generate($proposal, $student);

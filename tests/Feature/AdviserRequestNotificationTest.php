@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Tests\Support\DocumentFixtures;
 use Tests\TestCase;
 
@@ -45,7 +46,7 @@ class AdviserRequestNotificationTest extends TestCase
         $proposal->forceFill(['title' => 'Web application research', 'file_path' => 'proposal.pdf', 'original_filename' => 'proposal.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         Storage::disk('proposals')->put('proposal.pdf', DocumentFixtures::pdf());
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Web application using Laravel and MySQL.';
+        $analysis->extracted_text = 'Objectives: Web application using Laravel and MySQL.';
         $analysis->save();
         app(ProposalAnalysisService::class)->analyze($proposal);
         app(RecommendationService::class)->generate($proposal, $student);
@@ -85,7 +86,7 @@ class AdviserRequestNotificationTest extends TestCase
         $secondProposal = $firstProposal->replicate();
         $secondProposal->forceFill(['student_profile_id' => $secondProfile->id, 'file_path' => 'second.pdf', 'title' => 'Second student proposal'])->save();
         $analysis = $secondProposal->analysis()->make();
-        $analysis->extracted_text = 'Web application using Laravel and MySQL.';
+        $analysis->extracted_text = 'Objectives: Web application using Laravel and MySQL.';
         $analysis->save();
         app(ProposalAnalysisService::class)->analyze($secondProposal);
         app(RecommendationService::class)->generate($secondProposal, $second);
@@ -190,7 +191,7 @@ class AdviserRequestNotificationTest extends TestCase
                         app(AdviserRequestService::class)->close($request, $actor, 'declined');
                     }
                     $this->fail('Unauthorized response was allowed.');
-                } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+                } catch (HttpExceptionInterface $exception) {
                     $this->assertContains($exception->getStatusCode(), [403, 404]);
                 }
             }

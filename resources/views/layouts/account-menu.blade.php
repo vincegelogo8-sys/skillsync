@@ -1,7 +1,7 @@
 <details class="account-menu" data-dropdown>
     <summary class="account-trigger" aria-label="{{ __('Account menu for :name', ['name' => Auth::user()->name]) }}">
         <span class="account-name">{{ Auth::user()->name }}</span>
-        <span class="account-role">{{ match (Auth::user()->role) { 'faculty' => __('Faculty Adviser'), 'admin' => __('System Administrator'), default => __('Student') } }}</span>
+        <span class="account-role">{{ __(ucfirst(Auth::user()->role)) }}</span>
         <span class="account-mobile-label">{{ __('Account') }}</span>
     </summary>
     <div class="account-panel">

@@ -14,10 +14,12 @@ existing **Extract Document Text** and retry actions also analyze successful tex
 An already extracted proposal offers **Analyze Proposal** to its Student owner
 and to Admin. Faculty and other students cannot trigger or view its analysis.
 
-Results include the labeled abstract/summary when found, up to 12 keywords, one
-project type when supported, mentioned technologies, and up to three expertise
-areas. Missing evidence displays an explicit empty state. The user-entered title
-is preserved and contributes evidence to analysis.
+Results display the research title, objectives, up to 12 extracted keywords,
+project type when supported, and analysis date. Keywords use only title and
+objectives. Technologies and up to three expertise areas remain internal inputs
+to Preference Compatibility and Topic Alignment respectively; their cards are
+removed. Abstract/Summary is no longer extracted or displayed. Its obsolete
+database column and existing values are preserved, including during refresh.
 
 `analyzed_at` distinguishes a completed analysis with no matches from text that
 has not been analyzed. Proposal `status` continues to describe extraction;
@@ -33,11 +35,11 @@ document and extracted text and allows retry.
   map to the same canonical technology names used by faculty preferences.
 - Consume longer technology names first. React Native alone does not identify
   React, C++/C# do not identify C, and MySQL does not identify SQL.
-- Only technologies mentioned in the title or document are recorded. Python does
+- Only technologies mentioned in the title or objectives are recorded. Python does
   not imply TensorFlow, for example. These are mention-based rules; mentions in
-  references, alternatives, or negative statements can still be identified.
+  alternatives or negative statements within title/objectives can still be identified.
 - Each distinct configured phrase adds three points when present in the title and
-  one when present in the document. Repeating the same phrase does not add more
+  one when present in the objectives. Repeating the same phrase does not add more
   points. Highest positive project-type score wins; the top three positive
   expertise scores are selected. Ties follow configuration order. These internal
   rule scores are not adviser recommendation scores or confidence percentages.
@@ -45,12 +47,11 @@ document and extracted text and allows retry.
   then repeated non-stop words (at least twice). Generic standalone terms such as
   system, study, research, project, development, information, and application are
   excluded. Meaningful phrases can contain those words.
-- Abstract extraction recognizes a standalone Abstract, Summary, or Executive
-  Summary heading, including colon-prefixed inline text. It stops at recognized
-  section headings or keywords and caps the excerpt at 10,000 characters. Unusual
-  layouts may need review against the saved text. No abstract is generated.
-- Changing the dictionaries affects future analyses; already saved results stay
-  unchanged. Automatic reanalysis/versioning is outside this step.
+- Abstract and summary headings remain section boundaries so their content cannot
+  become title/objective evidence. Original extracted source text remains available.
+- Explicit analysis and recommendation generation rebuild evidence from title and objectives.
+  Refresh Extraction re-reads the file and recalculates existing recommendations atomically.
+  See [Title and objectives analysis](proposal-title-objectives.md).
 
 The shared technology list now also includes React Native, Android, AWS, Azure,
 Google Cloud, Cisco, Packet Tracer, Wireshark, and SQL. Existing faculty preference
@@ -94,8 +95,9 @@ reset the database. Tests use the isolated in-memory SQLite database.
 
 1. Sign in as the Student owner, open **Research Proposals**, and view the existing
    proposal. Select **Analyze Proposal** if it already has extracted text.
-2. Check the result labels, actual abstract text, technologies, keywords, and at
-   most three expertise areas. The original title and download must still work.
+2. Check the research title, objectives, extracted keywords, project type, and date.
+   Technologies Mentioned, Identified Expertise, and Abstract / Summary must not
+   appear. The original title and download must still work.
 3. Refresh: the analyzed timestamp and results should remain unchanged.
 4. Upload a text-based PDF or DOCX containing a labeled abstract, facial recognition,
    OpenCV, Python, and MySQL. Analysis should run after extraction, identify Computer

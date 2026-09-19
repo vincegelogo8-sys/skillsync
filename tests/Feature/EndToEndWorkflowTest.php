@@ -96,7 +96,7 @@ class EndToEndWorkflowTest extends TestCase
 
         $this->login($student, 'workflow-password');
         $this->send('patch', '/student/profile', ['student_number' => 'E2E-001', 'course' => 'BSIT', 'year_level' => 3, 'section' => 'B'])->assertSessionHasNoErrors();
-        $bytes = $type === 'pdf' ? DocumentFixtures::pdf(['Abstract', 'Web application using Laravel PHP MySQL.', 'Introduction', 'Database management and web development.']) : DocumentFixtures::docx();
+        $bytes = $type === 'pdf' ? DocumentFixtures::pdf(['Abstract', 'Web application using Laravel PHP MySQL.', 'Objectives:', 'To develop a web application using Laravel PHP MySQL.', 'Database management and web development.']) : DocumentFixtures::docx();
         $this->send('post', '/student/proposals', ['title' => 'Web Application for Student Records', 'document' => UploadedFile::fake()->createWithContent('proposal.'.$type, $bytes)])->assertSessionHasNoErrors();
         $proposal = ResearchProposal::sole();
         $this->assertNotNull($proposal->analysis->analyzed_at);

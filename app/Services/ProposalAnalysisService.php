@@ -28,13 +28,8 @@ class ProposalAnalysisService
 
                     if (! $analysis) {
                         throw ValidationException::withMessages([
-                            'analysis' =>
-                                'Extract readable document text before analyzing this proposal.',
+                            'analysis' => 'Extract readable document text before analyzing this proposal.',
                         ]);
-                    }
-
-                    if ($analysis->analyzed_at) {
-                        return $analysis;
                     }
 
                     foreach (
@@ -44,6 +39,10 @@ class ProposalAnalysisService
                         ) as $field => $value
                     ) {
                         $analysis->{$field} = $value;
+                    }
+
+                    if ($analysis->analyzed_at && ! $analysis->isDirty()) {
+                        return $analysis;
                     }
 
                     $analysis->analyzed_at = now();
@@ -59,9 +58,8 @@ class ProposalAnalysisService
             report($exception);
 
             throw ValidationException::withMessages([
-                'analysis' =>
-                    'Proposal analysis could not be saved. '
-                    . 'Your document and extracted text are preserved. Please retry.',
+                'analysis' => 'Proposal analysis could not be saved. '
+                    .'Your document and extracted text are preserved. Please retry.',
             ]);
         }
     }
@@ -76,9 +74,9 @@ class ProposalAnalysisService
         string $title,
         string $text
     ): array {
-        $heading = $this->normalize($title);
-
-        $body = $this->normalize($text);
+        $sections = app(ProposalSectionExtractor::class)->extract($text, $title);
+        $heading = $this->normalize($sections['title']);
+        $body = $this->normalize($sections['objectives']);
 
         $combined = trim(
             $heading.' '.$body
@@ -164,8 +162,7 @@ class ProposalAnalysisService
             array_merge(
                 array_keys($keywords),
                 array_map(
-                    fn ($term) =>
-                        mb_strtolower($term),
+                    fn ($term) => mb_strtolower($term),
                     $technologies
                 )
             )
@@ -189,12 +186,11 @@ class ProposalAnalysisService
         $filteredTokens = array_values(
             array_filter(
                 $tokens[0],
-                fn ($token) =>
-                    ! in_array(
-                        $token,
-                        $stopWords,
-                        true
-                    )
+                fn ($token) => ! in_array(
+                    $token,
+                    $stopWords,
+                    true
+                )
             )
         );
 
@@ -217,11 +213,10 @@ class ProposalAnalysisService
             $alreadyCovered = collect(
                 $selected
             )->contains(
-                fn ($phrase) =>
-                    $this->contains(
-                        $phrase,
-                        $word
-                    )
+                fn ($phrase) => $this->contains(
+                    $phrase,
+                    $word
+                )
             );
 
             if (! $alreadyCovered) {
@@ -230,10 +225,6 @@ class ProposalAnalysisService
         }
 
         return [
-            'abstract' => $this->abstract(
-                $text
-            ),
-
             'keywords' => array_slice(
                 array_values(
                     array_unique($selected)
@@ -242,22 +233,20 @@ class ProposalAnalysisService
                 12
             ),
 
-            'project_type' =>
-                array_key_first(
-                    $projectScores
-                ),
+            'project_type' => array_key_first(
+                $projectScores
+            ),
 
-            'technologies' =>
-                $technologies,
+            // Required internally by preference compatibility and topic alignment.
+            'technologies' => $technologies,
 
-            'identified_expertise_areas' =>
-                array_slice(
-                    array_keys(
-                        $expertiseScores
-                    ),
-                    0,
-                    3
+            'identified_expertise_areas' => array_slice(
+                array_keys(
+                    $expertiseScores
                 ),
+                0,
+                3
+            ),
         ];
     }
 
@@ -384,8 +373,7 @@ class ProposalAnalysisService
         ) {
             foreach (
                 $aliases[$technology]
-                    ?? [$technology]
-                as $alias
+                    ?? [$technology] as $alias
             ) {
                 $terms[] = [
                     $technology,
@@ -401,8 +389,7 @@ class ProposalAnalysisService
          */
         usort(
             $terms,
-            fn ($a, $b) =>
-                mb_strlen($b[1])
+            fn ($a, $b) => mb_strlen($b[1])
                 <=>
                 mb_strlen($a[1])
         );
@@ -544,73 +531,5 @@ class ProposalAnalysisService
         );
 
         return $scores;
-    }
-
-    private function abstract(
-        string $text
-    ): ?string {
-        $lines = preg_split(
-            '/\R/u',
-            $text
-        );
-
-        $collecting = false;
-
-        $content = [];
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-
-            if (! $collecting) {
-                if (
-                    preg_match(
-                        '/^\s*(?:abstract|executive summary|summary)\s*(?::\s*(.*))?$/iu',
-                        $line,
-                        $matches
-                    )
-                ) {
-                    $collecting = true;
-
-                    if (
-                        ! empty(
-                            $matches[1]
-                        )
-                    ) {
-                        $content[] =
-                            $matches[1];
-                    }
-                }
-
-                continue;
-            }
-
-            if (
-                preg_match(
-                    '/^\s*(?:(?:\d+(?:\.\d+)*\.?|[IVX]+\.)\s+)?(?:key\s*words|introduction|background(?: of the study)?|chapter\s+\d+|objectives|statement of the problem|scope(?: and limitations)?|review of related literature|methodology|references|conclusions?|acknowledg(?:e)?ments)\b/iu',
-                    $line
-                )
-            ) {
-                break;
-            }
-
-            if ($line !== '') {
-                $content[] = $line;
-            }
-        }
-
-        $abstract = trim(
-            implode(
-                "\n",
-                $content
-            )
-        );
-
-        return $abstract === ''
-            ? null
-            : mb_substr(
-                $abstract,
-                0,
-                10000
-            );
     }
 }

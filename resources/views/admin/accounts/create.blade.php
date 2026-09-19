@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Create Account') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Create Account') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Provide a new Student or Faculty member with access to SKILLSYNC.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -50,7 +51,7 @@
                         </div>
                         <div class="flex items-center gap-4">
                             <x-primary-button>{{ __('Create Account') }}</x-primary-button>
-                            <a href="{{ route('admin.accounts.index') }}" class="text-sm text-gray-600 underline">{{ __('Cancel') }}</a>
+                            <a href="{{ route('admin.accounts.index') }}" class=" button button-secondary">{{ __('Cancel') }}</a>
                         </div>
                     </form>
                 </div>

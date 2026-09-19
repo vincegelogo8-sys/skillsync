@@ -67,7 +67,10 @@ class TopicAlignmentService
             $documents[$id] = $entries->pluck('expertise_area')->unique()->implode(' ');
             $proficiencies[$id] = $entries->pluck('proficiency_score', 'expertise_area')->all();
         }
-        $similarity = $this->similarity->calculate($title."\n".$analysis->extracted_text, $documents);
+        $similarity = $this->similarity->calculate(
+            app(ProposalSectionExtractor::class)->extract($analysis->extracted_text, $title)['analysis_text'],
+            $documents
+        );
         $results = [];
         foreach ($ids as $id) {
             $multi = $this->multiExpertise->calculate($areas, $proficiencies[$id]);

@@ -1,9 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">
+        <h1 class="font-semibold text-xl text-gray-800">
             {{ __('Research Proposal') }}
-        </h2>
+        </h1>
     </x-slot>
+    <x-slot name="description">{{ __('Review your proposal, its analysis, and the next steps for adviser matching.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -12,7 +13,7 @@
 
                 <a
                     href="{{ route(($admin ? 'admin' : 'student').'.proposals.index') }}"
-                    class="text-sm text-indigo-600 underline"
+                    class=" button button-secondary"
                 >
                     {{ __('Back to proposals') }}
                 </a>
@@ -21,7 +22,7 @@
                 @if (session('status') === 'proposal-uploaded')
                     <div
                         role="status"
-                        class="mt-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
+                        class="ui-alert mt-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
                     >
                         {{ __('Research proposal uploaded successfully.') }}
                     </div>
@@ -30,7 +31,7 @@
                 @if (session('status') === 'extraction-refreshed')
                     <div
                         role="status"
-                        class="mt-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
+                        class="ui-alert mt-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
                     >
                         {{ __('Document extraction and proposal analysis were refreshed successfully.') }}
                     </div>
@@ -85,7 +86,7 @@
                 @endif
 
                 {{-- DOCUMENT INFORMATION --}}
-                <dl class="mt-6 space-y-4 text-sm">
+                <dl class="mt-6 grid grid-cols-1 gap-5 text-sm sm:grid-cols-2">
 
                     @if ($admin)
                         <div>
@@ -127,7 +128,7 @@
                         </dt>
 
                         <dd class="mt-1 text-gray-600">
-                            {{ ucfirst(str_replace('_', ' ', $proposal->status)) }}
+                            <x-status-badge :status="$proposal->status" />
                         </dd>
                     </div>
 
@@ -148,7 +149,7 @@
 
                     <a
                         href="{{ route(($admin ? 'admin' : 'student').'.proposals.download', $proposal) }}"
-                        class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition hover:bg-gray-50"
+                        class="button button-secondary"
                     >
                         {{ __('Download Document') }}
                     </a>
@@ -163,7 +164,7 @@
 
                         <button
                             type="submit"
-                            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            class="button button-secondary"
                         >
                             {{ __('Refresh Extraction') }}
                         </button>
@@ -183,7 +184,7 @@
 
                                 <button
                                     type="submit"
-                                    class="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                    class="button button-danger"
                                 >
                                     {{ __('Delete Proposal') }}
                                 </button>
@@ -193,7 +194,7 @@
                                 type="button"
                                 disabled
                                 title="A proposal with an adviser assignment cannot be deleted."
-                                class="inline-flex cursor-not-allowed items-center rounded-md bg-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-600 opacity-70"
+                                class="button"
                             >
                                 {{ __('Delete Proposal') }}
                             </button>
@@ -222,7 +223,7 @@
                 {{-- RECOMMENDATIONS --}}
                 <a
                     href="{{ route(($admin ? 'admin' : 'student').'.recommendations.index', $proposal) }}"
-                    class="mt-6 block font-medium text-indigo-600 underline"
+                    class="button button-primary mt-6"
                 >
                     {{ __('View Adviser Recommendations') }}
                 </a>
@@ -250,22 +251,6 @@
                                     {{ __('Text is saved from your document. Check that the content is readable.') }}
                                 </p>
                             </div>
-
-                            {{-- SECOND REFRESH BUTTON NEAR EXTRACTED TEXT --}}
-                            <form
-                                method="POST"
-                                action="{{ route(($admin ? 'admin' : 'student').'.proposals.refresh-extraction', $proposal) }}"
-                                onsubmit="return confirm('Re-extract this document and recalculate its analysis?');"
-                            >
-                                @csrf
-
-                                <button
-                                    type="submit"
-                                    class="text-sm font-medium text-indigo-600 underline hover:text-indigo-800"
-                                >
-                                    {{ __('Refresh Extraction') }}
-                                </button>
-                            </form>
 
                         </div>
 

@@ -118,3 +118,55 @@ document.querySelectorAll('.landing-nav a[href^="#"]').forEach((link) => {
         link.setAttribute('aria-current', 'location');
     });
 });
+
+// Keep native validation, confirmation prompts, CSRF fields and form submissions.
+// A cancelled confirmation never enters the busy state.
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post' || event.defaultPrevented) return;
+    if (form.dataset.submitting === 'true') {
+        event.preventDefault();
+        return;
+    }
+    form.dataset.submitting = 'true';
+    form.setAttribute('aria-busy', 'true');
+    const button = event.submitter;
+    if (button) {
+        button.dataset.originalText = button.textContent;
+        button.textContent = form.enctype === 'multipart/form-data' ? 'Uploading…' : 'Please wait…';
+    }
+    // Wait until the browser has constructed form data, including named submitters.
+    setTimeout(() => {
+        [...form.elements].filter((el) => el instanceof HTMLButtonElement && el.type === 'submit' && !el.disabled).forEach((el) => {
+            el.dataset.busyDisabled = 'true';
+            el.disabled = true;
+        });
+    }, 0);
+});
+window.addEventListener('pageshow', () => {
+    document.querySelectorAll('form[data-submitting]').forEach((form) => {
+        delete form.dataset.submitting;
+        form.removeAttribute('aria-busy');
+    });
+    document.querySelectorAll('[data-original-text]').forEach((button) => {
+        button.textContent = button.dataset.originalText;
+        delete button.dataset.originalText;
+    });
+    document.querySelectorAll('[data-busy-disabled]').forEach((button) => {
+        button.disabled = false;
+        delete button.dataset.busyDisabled;
+    });
+});
+
+// Count selected answers only; no answer keys or score calculations are exposed.
+document.querySelectorAll('[data-assessment-form]').forEach((form) => {
+    const progress = form.querySelector('[data-assessment-progress]');
+    const count = form.querySelector('[data-answered-count]');
+    const update = () => {
+        const answered = new Set([...form.querySelectorAll('input[type="radio"]:checked')].map((input) => input.name)).size;
+        progress.value = answered;
+        count.textContent = answered;
+    };
+    form.addEventListener('change', update);
+    update();
+});

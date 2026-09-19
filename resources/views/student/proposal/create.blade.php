@@ -1,5 +1,6 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">{{ __('Upload Research Proposal') }}</h2></x-slot>
+    <x-slot name="header"><h1 class="font-semibold text-xl text-gray-800">{{ __('Upload Research Proposal') }}</h1></x-slot>
+    <x-slot name="description">{{ __('Submit your research title and a proposal document to begin analysis.') }}</x-slot>
     <div class="py-12"><div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
             <form method="POST" action="{{ route('student.proposals.store') }}" enctype="multipart/form-data" class="max-w-2xl space-y-6">
@@ -21,7 +22,7 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-4">
                     <x-primary-button>{{ __('Upload Proposal') }}</x-primary-button>
-                    <a href="{{ route('student.proposals.index') }}" class="text-sm text-gray-600 underline">{{ __('Cancel') }}</a>
+                    <a href="{{ route('student.proposals.index') }}" class=" button button-secondary">{{ __('Cancel') }}</a>
                 </div>
             </form>
         </section>

@@ -64,7 +64,7 @@ class ProposalExtractionTest extends TestCase
         $this->assertTrue($proposal->analysis->researchProposal->is($proposal));
         if ($type === 'docx') {
             $this->assertStringContainsString("Research Heading\nLaravel and MySQL\n", $proposal->analysis->extracted_text);
-            $this->assertStringContainsString("Technology\tPurpose\nLaravel\tWeb application", $proposal->analysis->extracted_text);
+            $this->assertStringContainsString("Technology\nPurpose\nLaravel\nWeb application", $proposal->analysis->extracted_text);
             $this->assertStringContainsString('café', $proposal->analysis->extracted_text);
             $this->assertStringContainsString('List item for research', $proposal->analysis->extracted_text);
         }
@@ -76,7 +76,7 @@ class ProposalExtractionTest extends TestCase
     {
         $student = $this->student();
         $proposal = $this->uploaded($student);
-        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('Saved research text');
+        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('Objectives: Saved research text');
         $url = '/student/proposals/'.$proposal->id;
         $this->actingAs($student)->get($url)->assertSee('Extract Document Text');
         $this->assertDatabaseCount('proposal_analyses', 0);
@@ -109,7 +109,7 @@ class ProposalExtractionTest extends TestCase
         $proposal = $this->uploaded($student);
         $reader = $this->mock(DocumentExtractionRunner::class);
         $reader->shouldReceive('extract')->once()->ordered()->andThrow(new DocumentExtractionException('Temporary processing failure.'));
-        $reader->shouldReceive('extract')->once()->ordered()->andReturn('Recovered text');
+        $reader->shouldReceive('extract')->once()->ordered()->andReturn('Objectives: Recovered text');
         $url = '/student/proposals/'.$proposal->id;
         $this->actingAs($student)->post($url.'/extract')->assertRedirect($url);
         $this->get($url)->assertSee('Temporary processing failure.');
@@ -131,7 +131,7 @@ class ProposalExtractionTest extends TestCase
         $this->post($adminUrl)->assertForbidden();
         $this->actingAs(User::factory()->create(['role' => User::ROLE_FACULTY]))->post($studentUrl)->assertForbidden();
         $this->post($adminUrl)->assertForbidden();
-        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('Admin extracted research');
+        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('Objectives: Admin extracted research');
         $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->post($adminUrl)->assertRedirect('/admin/proposals/'.$proposal->id);
         $this->get('/admin/proposals/'.$proposal->id)->assertSee('Admin extracted research');
     }

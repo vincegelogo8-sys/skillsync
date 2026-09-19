@@ -81,7 +81,7 @@ class PreferenceCompatibilityTest extends TestCase
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Web Application', 'file_path' => 'step16.pdf', 'original_filename' => 'step16.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Web application using Laravel, PHP and MySQL.';
+        $analysis->extracted_text = 'Objectives: Web application using Laravel, PHP and MySQL.';
         $analysis->save();
         $analysis = app(ProposalAnalysisService::class)->analyze($proposal);
         $before = $analysis->toArray();

@@ -88,7 +88,7 @@ class AdvisoryThresholdTest extends TestCase
         }
         $proposal = $this->proposal();
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Web application using PHP.';
+        $analysis->extracted_text = 'Objectives: Web application using PHP.';
         $analysis->save();
         app(ProposalAnalysisService::class)->analyze($proposal);
         $before = app(RecommendationService::class)->generate($proposal, $admin)->sole()->toArray();

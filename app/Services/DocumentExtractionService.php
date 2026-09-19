@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\DocumentExtractionException;
 use DOMDocument;
+use DOMXPath;
 use PhpOffice\PhpWord\Element\AbstractContainer;
 use PhpOffice\PhpWord\Element\Table;
 use PhpOffice\PhpWord\Element\TextBreak;
@@ -18,8 +19,8 @@ class DocumentExtractionService
 {
     public const EMPTY_PDF =
         'Unable to extract readable text from this PDF. '
-        . 'The document may contain scanned pages. '
-        . 'Please upload a text-based PDF or DOCX file.';
+        .'The document may contain scanned pages. '
+        .'Please upload a text-based PDF or DOCX file.';
 
     public function extract(string $path, string $type): string
     {
@@ -51,9 +52,9 @@ class DocumentExtractionService
             throw new DocumentExtractionException(
                 $type === 'pdf'
                     ? 'Unable to read this PDF. It may be encrypted or damaged. '
-                        . 'Please upload an unencrypted text-based PDF.'
+                        .'Please upload an unencrypted text-based PDF.'
                     : 'Unable to read this DOCX file. '
-                        . 'Please save it as a valid Word document and upload it again.'
+                        .'Please save it as a valid Word document and upload it again.'
             );
         }
 
@@ -70,14 +71,14 @@ class DocumentExtractionService
                 $type === 'pdf'
                     ? self::EMPTY_PDF
                     : 'Unable to extract readable text from this DOCX file. '
-                        . 'Please upload a document containing text.'
+                        .'Please upload a document containing text.'
             );
         }
 
         if (mb_strlen($text) > 1000000) {
             throw new DocumentExtractionException(
                 'This document contains too much text to process. '
-                . 'Please upload a shorter proposal.'
+                .'Please upload a shorter proposal.'
             );
         }
 
@@ -89,143 +90,7 @@ class DocumentExtractionService
      */
     private function normalizeExtractedText(string $text): string
     {
-        $text = mb_convert_encoding(
-            $text,
-            'UTF-8',
-            'UTF-8'
-        );
-
-        /*
-         * Normalize line endings.
-         */
-        $text = str_replace(
-            ["\r\n", "\r"],
-            "\n",
-            $text
-        );
-
-        /*
-         * Convert form-feed/page breaks into normal line breaks.
-         */
-        $text = str_replace(
-            "\f",
-            "\n",
-            $text
-        );
-
-        /*
-         * Normalize non-breaking spaces.
-         */
-        $text = str_replace(
-            "\u{00A0}",
-            ' ',
-            $text
-        );
-
-        /*
-         * Remove soft hyphens.
-         */
-        $text = str_replace(
-            "\u{00AD}",
-            '',
-            $text
-        );
-
-        /*
-         * Repair words broken across PDF lines.
-         *
-         * Example:
-         *
-         * recommen-
-         * dation
-         *
-         * becomes:
-         *
-         * recommendation
-         */
-        $text = preg_replace(
-            '/(\p{L})-\h*\n\h*(\p{L})/u',
-            '$1$2',
-            $text
-        );
-
-        /*
-         * Normalize Unicode dash characters.
-         */
-        $text = str_replace(
-            ['–', '—', '−'],
-            '-',
-            $text
-        );
-
-        /*
-         * Remove unsupported control characters.
-         */
-        $text = preg_replace(
-            '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u',
-            '',
-            $text
-        );
-
-        /*
-         * Normalize spaces on each line.
-         */
-        $lines = preg_split('/\n/u', $text);
-
-        $cleanLines = [];
-
-        foreach ($lines as $line) {
-            $line = preg_replace(
-                '/[ \t]+/u',
-                ' ',
-                $line
-            );
-
-            $line = trim($line);
-
-            /*
-             * Ignore standalone page numbers:
-             *
-             * 1
-             * Page 1
-             * PAGE 2
-             */
-            if (
-                preg_match(
-                    '/^(?:page\s*)?\d+$/iu',
-                    $line
-                )
-            ) {
-                continue;
-            }
-
-            $cleanLines[] = $line;
-        }
-
-        $text = implode(
-            "\n",
-            $cleanLines
-        );
-
-        /*
-         * Remove unnecessary spaces before punctuation.
-         */
-        $text = preg_replace(
-            '/\s+([,.;:!?])/u',
-            '$1',
-            $text
-        );
-
-        /*
-         * Collapse excessive blank lines.
-         */
-        $text = preg_replace(
-            '/\n{3,}/u',
-            "\n\n",
-            $text
-        );
-
-        return trim($text);
+        return (new ProposalSectionExtractor)->normalize($text);
     }
 
     private function pdf(string $path): string
@@ -309,7 +174,7 @@ class DocumentExtractionService
         ) {
             throw new DocumentExtractionException(
                 'Unable to open this DOCX file. '
-                . 'Please upload a valid Word document.'
+                .'Please upload a valid Word document.'
             );
         }
 
@@ -355,6 +220,8 @@ class DocumentExtractionService
                 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
             $paragraphs = [];
+            $xpath = new DOMXPath($dom);
+            $xpath->registerNamespace('w', $namespace);
 
             foreach (
                 $dom->getElementsByTagNameNS(
@@ -365,12 +232,13 @@ class DocumentExtractionService
                 $parts = [];
 
                 foreach (
-                    $paragraph->getElementsByTagNameNS(
-                        $namespace,
-                        't'
-                    ) as $textNode
+                    $xpath->query('.//w:t | .//w:br | .//w:cr | .//w:tab', $paragraph) as $textNode
                 ) {
-                    $parts[] = $textNode->nodeValue;
+                    $parts[] = match ($textNode->localName) {
+                        'br', 'cr' => "\n",
+                        'tab' => "\t",
+                        default => $textNode->nodeValue,
+                    };
                 }
 
                 $paragraphText = trim(
@@ -404,7 +272,7 @@ class DocumentExtractionService
         if ($depth > 50) {
             throw new DocumentExtractionException(
                 'This document has overly complex formatting. '
-                . 'Please upload a simpler document.'
+                .'Please upload a simpler document.'
             );
         }
 
@@ -428,7 +296,7 @@ class DocumentExtractionService
                 }
 
                 $rows[] = implode(
-                    "\t",
+                    "\n",
                     $cells
                 );
             }
@@ -487,7 +355,7 @@ class DocumentExtractionService
         ) {
             throw new DocumentExtractionException(
                 'Unable to open this DOCX file. '
-                . 'Please upload a valid Word document.'
+                .'Please upload a valid Word document.'
             );
         }
 
@@ -504,7 +372,7 @@ class DocumentExtractionService
             ) {
                 throw new DocumentExtractionException(
                     'This DOCX file is invalid or too complex. '
-                    . 'Please upload a valid Word document.'
+                    .'Please upload a valid Word document.'
                 );
             }
 
@@ -529,7 +397,7 @@ class DocumentExtractionService
                 ) {
                     throw new DocumentExtractionException(
                         'This DOCX file expands beyond the processing limit. '
-                        . 'Please upload a smaller document.'
+                        .'Please upload a smaller document.'
                     );
                 }
 
@@ -551,7 +419,7 @@ class DocumentExtractionService
                 ) {
                     throw new DocumentExtractionException(
                         'This DOCX file contains an oversized document part. '
-                        . 'Please upload a smaller document.'
+                        .'Please upload a smaller document.'
                     );
                 }
 
@@ -576,7 +444,7 @@ class DocumentExtractionService
                 ) {
                     throw new DocumentExtractionException(
                         'This DOCX file contains unsupported or malformed XML. '
-                        . 'Please save a new Word document and upload it again.'
+                        .'Please save a new Word document and upload it again.'
                     );
                 }
 

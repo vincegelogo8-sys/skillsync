@@ -28,7 +28,7 @@ return [
     'admin' => [
         'primary' => [
             ['route' => 'admin.proposals.index', 'label' => 'Research Proposals', 'description' => 'Review proposals, analysis, and recommendations.', 'active' => ['admin.proposals.*', 'admin.recommendations.*']],
-            ['route' => 'admin.requests.index', 'label' => 'Adviser Requests', 'description' => 'Review requests and approve final assignments.', 'active' => ['admin.requests.*']],
+            ['route' => 'admin.requests.index', 'label' => 'Adviser Requests', 'description' => 'Monitor requests and faculty decisions.', 'active' => ['admin.requests.*']],
             ['route' => 'admin.assignments.index', 'label' => 'Adviser Assignments', 'description' => 'Review final assignments and their approvers.', 'active' => ['admin.assignments.*']],
         ],
         'secondary_label' => 'Management',

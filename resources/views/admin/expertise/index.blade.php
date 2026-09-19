@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Expertise') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Expertise') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Review faculty profiles and manage their research expertise.') }}</x-slot>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">

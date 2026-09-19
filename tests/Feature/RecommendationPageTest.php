@@ -22,7 +22,7 @@ class RecommendationPageTest extends TestCase
         $proposal->forceFill(['title' => 'Web Application', 'file_path' => 'private-'.$user->id.'.pdf', 'original_filename' => 'proposal.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         if ($analyzed) {
             $analysis = $proposal->analysis()->make();
-            $analysis->extracted_text = 'Web application using Laravel PHP MySQL.';
+            $analysis->extracted_text = 'Objectives: Web application using Laravel PHP MySQL.';
             $analysis->save();
             app(ProposalAnalysisService::class)->analyze($proposal);
         }

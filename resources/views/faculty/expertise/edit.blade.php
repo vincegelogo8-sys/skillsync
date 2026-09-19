@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Edit Research Expertise') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Edit Research Expertise') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Update the expertise area and its recorded proficiency.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -14,7 +15,7 @@
                         @include('faculty.expertise.form')
                         <div class="flex items-center gap-4">
                             <x-primary-button>{{ __('Save Expertise') }}</x-primary-button>
-                            <a href="{{ route($routePrefix.'index', $routeParameters) }}" class="text-sm text-gray-600 underline">{{ __('Cancel') }}</a>
+                            <a href="{{ route($routePrefix.'index', $routeParameters) }}" class=" button button-secondary">{{ __('Cancel') }}</a>
                         </div>
                     </form>
                 </div>

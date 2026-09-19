@@ -10,14 +10,14 @@
         'skills_assessment_score' => 'Skills Assessment',
     ];
 @endphp
-<article class="bg-white p-4 shadow sm:rounded-lg sm:p-8" aria-labelledby="faculty-{{ $recommendation->id }}">
+<article class="recommendation-card bg-white p-4 shadow sm:rounded-lg sm:p-8" aria-labelledby="faculty-{{ $recommendation->id }}">
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
             <p class="text-sm font-semibold text-indigo-700">{{ __('Rank #:rank', ['rank' => $recommendation->rank]) }}</p>
             <h3 id="faculty-{{ $recommendation->id }}" class="mt-1 text-xl font-semibold text-gray-900 break-words">{{ $recommendation->facultyProfile->user->name }}</h3>
             <p class="mt-1 text-sm text-gray-600 break-words">{{ $recommendation->facultyProfile->department }}</p>
         </div>
-        <div class="rounded-lg bg-indigo-50 px-5 py-3">
+        <div class="recommendation-score rounded-lg bg-indigo-50 px-5 py-3">
             <p class="text-sm font-medium text-indigo-900">{{ __('Final Recommendation Score') }}</p>
             <p class="mt-1 text-3xl font-bold text-indigo-800 tabular-nums">{{ number_format((float) $recommendation->final_score, 2) }}%</p>
         </div>
@@ -27,27 +27,28 @@
             <div class="rounded-md border border-gray-200 p-3">
                 <dt class="text-sm text-gray-600">{{ __($label) }}</dt>
                 <dd class="mt-1 text-lg font-semibold text-gray-900 tabular-nums">{{ number_format((float) $recommendation->{$field}, 2) }}%</dd>
+                <dd><progress class="score-meter" value="{{ $recommendation->{$field} }}" max="100" aria-label="{{ __($label) }}"></progress></dd>
             </div>
         @endforeach
     </dl>
-    <div class="mt-5 flex flex-wrap items-center gap-3 text-sm">
+    <div class="recommendation-availability mt-5 flex flex-wrap items-center gap-3 text-sm">
         <p class="font-medium text-gray-800">{{ __('Advisory Load') }}: {{ $capacity['load'] }} / {{ $capacity['limit'] }}</p>
-        <span @class(['rounded px-3 py-1 font-semibold', 'bg-red-50 text-red-800' => $capacity['is_full'], 'bg-green-50 text-green-800' => ! $capacity['is_full']])>{{ $capacity['status'] }}</span>
+        <x-status-badge :status="$capacity['status']">{{ $capacity['status'] }}</x-status-badge>
         @if ($admin)<a href="{{ route('admin.advisory-limits.edit', $recommendation->faculty_profile_id) }}" class="text-indigo-600 underline">{{ __('Edit advisory limit') }}</a>@endif
     </div>
     <p class="mt-2 text-xs text-gray-600">{{ __('Availability reflects current active assignments and does not change the recommendation score.') }}</p>
     @unless ($admin)
         @if (in_array($recommendation->faculty_profile_id, $activeRequests, true))
-            <button type="button" disabled class="mt-3 cursor-not-allowed rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-600">{{ __('Already Requested') }}</button>
+            <button type="button" disabled class="button mt-3">{{ __('Already Requested') }}</button>
         @elseif ($hasAssignment)
             <p class="mt-3 text-sm text-gray-600">{{ __('This proposal already has an active adviser assignment.') }}</p>
         @elseif ($capacity['is_full'])
-            <button type="button" disabled class="mt-3 cursor-not-allowed rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-600">{{ __('Request Adviser') }}</button>
+            <button type="button" disabled class="button mt-3">{{ __('Request Adviser') }}</button>
             <p class="mt-2 text-sm text-gray-600">{{ __('This adviser has reached their advisory limit.') }}</p>
         @else
             <form method="POST" action="{{ route('student.requests.store', [$proposal, $recommendation->faculty_profile_id]) }}" class="mt-3">
                 @csrf
-                <x-primary-button class="button-success">{{ __('Request Adviser') }}</x-primary-button>
+                <x-primary-button>{{ __('Request Adviser') }}</x-primary-button>
             </form>
         @endif
     @endunless

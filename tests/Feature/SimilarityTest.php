@@ -99,7 +99,7 @@ class SimilarityTest extends TestCase
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Web Development', 'file_path' => 'step14.pdf', 'original_filename' => 'step14.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Web development and database systems.';
+        $analysis->extracted_text = 'Objectives: Web development and database systems.';
         $analysis->save();
         $analysis = app(ProposalAnalysisService::class)->analyze($proposal);
         $before = $analysis->toArray();

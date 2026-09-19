@@ -52,6 +52,8 @@ class RecommendationService
             if (! $analysis?->analyzed_at) {
                 throw ValidationException::withMessages(['recommendations' => 'Complete proposal analysis before generating recommendations.']);
             }
+            // Rebuild legacy whole-document evidence before generating new scores.
+            $analysis = app(ProposalAnalysisService::class)->analyze($proposal);
             // Capacity is independent of scoring: include all current faculty profiles.
             $faculties = FacultyProfile::whereHas('user', fn ($query) => $query->where('role', User::ROLE_FACULTY))
                 ->with(['competency', 'latestCompletedAssessment'])->orderBy('id')->get();

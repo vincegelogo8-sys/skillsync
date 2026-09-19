@@ -1,19 +1,20 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Research Expertise') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Research Expertise') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Maintain research expertise areas and their proficiency scores.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto space-y-6 sm:px-6 lg:px-8">
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                 @if ($routePrefix === 'admin.expertise.')
-                    <a href="{{ route('admin.expertise.faculty') }}" class="text-sm text-indigo-600 underline">{{ __('Back to Faculty Expertise') }}</a>
+                    <a href="{{ route('admin.expertise.faculty') }}" class=" button button-secondary">{{ __('Back to Faculty Expertise') }}</a>
                 @endif
                 <h3 class="text-lg font-medium text-gray-900 mt-2">{{ $profile->user->name }}</h3>
                 <p class="mt-1 text-sm text-gray-600">{{ $profile->department }}</p>
                 <p class="mt-3 text-sm text-gray-600">{{ __('List research expertise and proficiency in each area. These scores will support research topic matching.') }}</p>
                 @if (session('status'))
-                    <p role="status" class="mt-4 text-sm font-medium text-green-700">{{ session('status') }}</p>
+                    <p role="status" class="ui-alert mt-4 text-sm font-medium text-green-700">{{ session('status') }}</p>
                 @endif
             </section>
 
@@ -25,6 +26,7 @@
                             <div>
                                 <h4 class="font-medium text-gray-900">{{ $entry->expertise_area }}</h4>
                                 <p class="mt-1 text-sm text-gray-600">{{ __('Proficiency') }}: {{ $entry->proficiency_score }}/100</p>
+                                <progress class="score-meter" value="{{ $entry->proficiency_score }}" max="100" aria-label="{{ __('Proficiency in :area', ['area' => $entry->expertise_area]) }}"></progress>
                             </div>
                             <div class="flex flex-wrap items-center gap-4">
                                 <a href="{{ route($routePrefix.'edit', $routeParameters + ['expertise' => $entry]) }}" class="text-sm text-indigo-600 underline"
@@ -41,7 +43,7 @@
                             </div>
                         </article>
                     @empty
-                        <p class="py-4 text-sm text-gray-600">{{ __('No research expertise added yet. Add your first area below.') }}</p>
+                        <x-empty-state title="{{ __('No research expertise added yet. Add your first area below.') }}" />
                     @endforelse
                 </div>
             </section>

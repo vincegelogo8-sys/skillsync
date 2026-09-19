@@ -75,16 +75,8 @@ class SimilarityService
             );
         }
 
-        /*
-         * The extracted document already contains proposal content.
-         *
-         * The tokenizer below converts PDF and DOCX text into
-         * the same canonical token representation.
-         */
-        $text =
-            $title
-            ."\n"
-            .$analysis->extracted_text;
+        $text = app(ProposalSectionExtractor::class)
+            ->extract($analysis->extracted_text, $title)['analysis_text'];
 
         return $this->calculate(
             $text,
@@ -98,8 +90,7 @@ class SimilarityService
      * - one proposal document
      * - every supplied faculty expertise document
      *
-     * @param array<int|string, string> $facultyDocuments
-     *
+     * @param  array<int|string, string>  $facultyDocuments
      * @return array{
      *     scores: array,
      *     inverse_document_frequencies: array,
@@ -119,8 +110,7 @@ class SimilarityService
         $facultyTokens = [];
 
         foreach (
-            $facultyDocuments
-            as $id => $document
+            $facultyDocuments as $id => $document
         ) {
             if (! is_string($document)) {
                 throw new InvalidArgumentException(
@@ -147,8 +137,7 @@ class SimilarityService
             $allDocuments as $tokens
         ) {
             foreach (
-                array_unique($tokens)
-                as $term
+                array_unique($tokens) as $term
             ) {
                 $documentFrequencies[$term] =
                     (
@@ -172,8 +161,7 @@ class SimilarityService
         );
 
         foreach (
-            $documentFrequencies
-            as $term => $frequency
+            $documentFrequencies as $term => $frequency
         ) {
             /*
              * Smoothed IDF.
@@ -198,8 +186,7 @@ class SimilarityService
         $scores = [];
 
         foreach (
-            $facultyTokens
-            as $id => $tokens
+            $facultyTokens as $id => $tokens
         ) {
             $facultyVectors[$id] =
                 $this->vector(
@@ -215,17 +202,13 @@ class SimilarityService
         }
 
         return [
-            'scores' =>
-                $scores,
+            'scores' => $scores,
 
-            'inverse_document_frequencies' =>
-                $idf,
+            'inverse_document_frequencies' => $idf,
 
-            'proposal_vector' =>
-                $proposalVector,
+            'proposal_vector' => $proposalVector,
 
-            'faculty_vectors' =>
-                $facultyVectors,
+            'faculty_vectors' => $facultyVectors,
         ];
     }
 
@@ -358,8 +341,7 @@ class SimilarityService
         $stopWords = [];
 
         foreach (
-            $configuredStopWords
-            as $word
+            $configuredStopWords as $word
         ) {
             $stopWords[
                 mb_strtolower(
@@ -421,8 +403,7 @@ class SimilarityService
         );
 
         foreach (
-            array_count_values($tokens)
-            as $term => $frequency
+            array_count_values($tokens) as $term => $frequency
         ) {
             if (
                 ! isset(
@@ -468,8 +449,7 @@ class SimilarityService
         $rightSquared = 0.0;
 
         foreach (
-            $left
-            as $term => $weight
+            $left as $term => $weight
         ) {
             $dot +=
                 $weight

@@ -1,5 +1,6 @@
 <x-app-layout>
-    <x-slot name="header"><h2 class="font-semibold text-xl text-gray-800">{{ $question->exists ? __('Edit Assessment Question') : __('Add Assessment Question') }}</h2></x-slot>
+    <x-slot name="header"><h1 class="font-semibold text-xl text-gray-800">{{ $question->exists ? __('Edit Assessment Question') : __('Add Assessment Question') }}</h1></x-slot>
+    <x-slot name="description">{{ __('Write a clear question, provide answer choices, and select the correct answer.') }}</x-slot>
     <div class="py-12"><div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
             <form method="POST" action="{{ $question->exists ? route('admin.assessment-questions.update', $question) : route('admin.assessment-questions.store') }}" class="max-w-2xl space-y-6">
@@ -36,7 +37,7 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <x-primary-button>{{ __('Save Question') }}</x-primary-button>
-                    <a href="{{ route('admin.assessment-questions.index') }}" class="text-sm text-gray-600 underline">{{ __('Cancel') }}</a>
+                    <a href="{{ route('admin.assessment-questions.index') }}" class=" button button-secondary">{{ __('Cancel') }}</a>
                 </div>
             </form>
         </section>

@@ -1,7 +1,8 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Student Profile') }}</h2>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Student Profile') }}</h1>
     </x-slot>
+    <x-slot name="description">{{ __('Keep your academic details current for your research proposal and adviser requests.') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -17,14 +18,14 @@
                     </a>
 
                     @if (session('status') === 'student-profile-updated')
-                        <p role="status" class="mt-4 text-sm font-medium text-green-700">
+                        <p role="status" class="ui-alert mt-4 text-sm font-medium text-green-700">
                             {{ __('Student profile saved successfully.') }}
                         </p>
                     @endif
 
                     <form method="POST" action="{{ route('student.profile.update') }}" class="mt-6 space-y-6">
                         @if (session('status') === 'complete-profile-for-proposal')
-                            <p role="status" class="text-sm text-amber-800">{{ __('Save your student profile before uploading a research proposal.') }}</p>
+                            <p role="status" class="ui-alert text-sm text-amber-800">{{ __('Save your student profile before uploading a research proposal.') }}</p>
                         @endif
                         @csrf
                         @method('PATCH')
