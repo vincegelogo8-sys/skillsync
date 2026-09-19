@@ -33,15 +33,15 @@ class AdviserAssignmentController extends Controller
         try {
             $service->approve($adviserRequest, $request->user());
         } catch (ValidationException $exception) {
-            return redirect()->route('admin.requests.index')->withErrors($exception->errors());
+            return redirect()->route('faculty.requests.index')->withErrors($exception->errors());
         } catch (HttpExceptionInterface $exception) {
             throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 
-            return redirect()->route('admin.requests.index')->withErrors(['assignment' => 'The assignment could not be saved. No partial approval was kept. Please try again.']);
+            return redirect()->route('faculty.requests.index')->withErrors(['assignment' => 'The assignment could not be saved. No partial approval was kept. Please try again.']);
         }
 
-        return redirect()->route('admin.assignments.index')->with('status', 'adviser-assigned');
+        return redirect()->route('faculty.assignments.index')->with('status', 'adviser-assigned');
     }
 }

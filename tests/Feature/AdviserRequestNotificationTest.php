@@ -66,6 +66,8 @@ class AdviserRequestNotificationTest extends TestCase
             $mail = $notification->toMail($faculty);
             $this->assertSame('New Research Adviser Request - SKILLSYNC', $mail->subject);
             $this->assertSame(route('faculty.requests.index'), $mail->actionUrl);
+            $this->assertSame([[$request->studentProfile->user->email, $request->studentProfile->user->name]], $mail->replyTo);
+            $this->assertContains('Student Email: '.$request->studentProfile->user->email, $mail->introLines);
             $this->assertStringContainsString($request->researchProposal->title, $mail->render());
 
             return true;
@@ -75,13 +77,51 @@ class AdviserRequestNotificationTest extends TestCase
         $this->assertDatabaseCount('adviser_requests', 1);
     }
 
-    public function test_admin_approval_notifies_student_once_and_keeps_assignment(): void
+    public function test_two_students_can_request_the_same_adviser_with_their_own_reply_addresses(): void
+    {
+        [$first, $faculty, $facultyProfile, $firstProposal] = $this->scenario();
+        $second = User::factory()->create(['email' => 'second.student@gmail.com']);
+        $secondProfile = $second->studentProfile()->create(['student_number' => 'S-'.$second->id, 'course' => 'BSIT', 'year_level' => 3, 'section' => 'B']);
+        $secondProposal = $firstProposal->replicate();
+        $secondProposal->forceFill(['student_profile_id' => $secondProfile->id, 'file_path' => 'second.pdf', 'title' => 'Second student proposal'])->save();
+        $analysis = $secondProposal->analysis()->make();
+        $analysis->extracted_text = 'Web application using Laravel and MySQL.';
+        $analysis->save();
+        app(ProposalAnalysisService::class)->analyze($secondProposal);
+        app(RecommendationService::class)->generate($secondProposal, $second);
+
+        foreach ([[$first, $firstProposal], [$second, $secondProposal]] as [$student, $proposal]) {
+            $this->post('/login', ['email' => $student->email, 'password' => 'password'])->assertSessionHasNoErrors();
+            $this->assertAuthenticatedAs($student);
+            $this->post(route('student.requests.store', [$proposal, $facultyProfile]))->assertSessionHasNoErrors();
+            $this->post('/logout')->assertRedirect('/');
+        }
+
+        $this->assertDatabaseCount('adviser_requests', 2);
+        Notification::assertSentToTimes($faculty, AdviserRequestReceivedNotification::class, 2);
+        foreach ([$first, $second] as $student) {
+            Notification::assertSentTo($faculty, AdviserRequestReceivedNotification::class, function ($notification) use ($student, $faculty) {
+                return $notification->request->studentProfile->user->is($student)
+                    && $notification->toMail($faculty)->replyTo === [[$student->email, $student->name]];
+            });
+        }
+
+        Notification::fake();
+        $requests = AdviserRequest::orderBy('id')->get();
+        $this->actingAs($faculty)->post(route('faculty.requests.approve', $requests[0]))->assertSessionHasNoErrors();
+        $this->patch(route('faculty.requests.decline', $requests[1]))->assertSessionHasNoErrors();
+        Notification::assertSentTo($first, AdviserRequestAcceptedNotification::class);
+        Notification::assertSentTo($second, AdviserRequestDeclinedNotification::class);
+        Notification::assertCount(2);
+    }
+
+    public function test_faculty_acceptance_notifies_student_once_and_keeps_assignment(): void
     {
         [$student, $faculty, $profile, $proposal] = $this->scenario();
         $request = app(AdviserRequestService::class)->submit($proposal, $profile, $student);
         Notification::fake();
-        $url = route('admin.requests.approve', $request);
-        $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->post($url)->assertSessionHasNoErrors();
+        $url = route('faculty.requests.approve', $request);
+        $this->actingAs($faculty)->post($url)->assertSessionHasNoErrors();
         $this->post($url)->assertSessionHasNoErrors();
         Notification::assertSentTo($student, AdviserRequestAcceptedNotification::class, function ($notification) use ($student, $faculty) {
             $mail = $notification->toMail($student);
@@ -97,20 +137,13 @@ class AdviserRequestNotificationTest extends TestCase
         $this->assertDatabaseCount('adviser_assignments', 1);
     }
 
-    public static function declineRoles(): array
-    {
-        return [['admin'], ['faculty']];
-    }
-
-    #[DataProvider('declineRoles')]
-    public function test_authorized_decline_notifies_student_once(string $role): void
+    public function test_authorized_decline_notifies_student_once(): void
     {
         [$student, $faculty, $profile, $proposal] = $this->scenario();
         $request = app(AdviserRequestService::class)->submit($proposal, $profile, $student);
         Notification::fake();
-        $actor = $role === 'faculty' ? $faculty : User::factory()->create(['role' => 'admin']);
-        $url = route($role.'.requests.decline', $request);
-        $this->actingAs($actor)->patch($url)->assertSessionHasNoErrors();
+        $url = route('faculty.requests.decline', $request);
+        $this->actingAs($faculty)->patch($url)->assertSessionHasNoErrors();
         $this->patch($url)->assertSessionHasErrors('adviser_request');
         Notification::assertSentTo($student, AdviserRequestDeclinedNotification::class, function ($notification) use ($student, $proposal) {
             $mail = $notification->toMail($student);
@@ -131,12 +164,40 @@ class AdviserRequestNotificationTest extends TestCase
         $other = User::factory()->create(['role' => 'faculty']);
         $other->facultyProfile()->create(['department' => 'Other']);
         $this->actingAs($other)->patch(route('faculty.requests.decline', $request))->assertNotFound();
-        foreach ([$student, $faculty, $other] as $actor) {
-            $this->actingAs($actor)->post(route('admin.requests.approve', $request))->assertForbidden();
+        $this->post(route('faculty.requests.approve', $request))->assertNotFound();
+        foreach ([$student, User::factory()->create(['role' => 'admin'])] as $actor) {
+            $this->actingAs($actor)->post(route('faculty.requests.approve', $request))->assertForbidden();
+            $this->patch(route('faculty.requests.decline', $request))->assertForbidden();
         }
         $this->actingAs(User::factory()->create())->post(route('student.requests.store', [$proposal, $profile]))->assertNotFound();
         Notification::assertNothingSent();
         $this->assertSame('pending', $request->fresh()->status);
+    }
+
+    public function test_services_reject_admin_and_other_faculty_directly(): void
+    {
+        [$student, $faculty, $profile, $proposal] = $this->scenario();
+        $request = app(AdviserRequestService::class)->submit($proposal, $profile, $student);
+        Notification::fake();
+        $other = User::factory()->create(['role' => 'faculty']);
+        $other->facultyProfile()->create(['department' => 'Other']);
+        foreach ([User::factory()->create(['role' => 'admin']), $other] as $actor) {
+            foreach (['approve', 'decline'] as $action) {
+                try {
+                    if ($action === 'approve') {
+                        app(AdviserAssignmentService::class)->approve($request, $actor);
+                    } else {
+                        app(AdviserRequestService::class)->close($request, $actor, 'declined');
+                    }
+                    $this->fail('Unauthorized response was allowed.');
+                } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+                    $this->assertContains($exception->getStatusCode(), [403, 404]);
+                }
+            }
+        }
+        $this->assertSame('pending', $request->fresh()->status);
+        $this->assertDatabaseCount('adviser_assignments', 0);
+        Notification::assertNothingSent();
     }
 
     public function test_views_refreshes_recommendations_and_extraction_send_nothing(): void
@@ -179,7 +240,7 @@ class AdviserRequestNotificationTest extends TestCase
         if ($action === 'submit') {
             $this->actingAs($student)->post(route('student.requests.store', [$proposal, $profile]))->assertSessionHasNoErrors();
         } elseif ($action === 'approve') {
-            $this->actingAs(User::factory()->create(['role' => 'admin']))->post(route('admin.requests.approve', $request))->assertSessionHasNoErrors();
+            $this->actingAs($faculty)->post(route('faculty.requests.approve', $request))->assertSessionHasNoErrors();
             $this->assertDatabaseCount('adviser_assignments', 1);
         } else {
             $this->actingAs($faculty)->patch(route('faculty.requests.decline', $request))->assertSessionHasNoErrors();
@@ -204,7 +265,7 @@ class AdviserRequestNotificationTest extends TestCase
             if ($action === 'submit') {
                 app(AdviserRequestService::class)->submit($proposal, $profile, $student);
             } elseif ($action === 'approve') {
-                app(AdviserAssignmentService::class)->approve($request, User::factory()->create(['role' => 'admin']));
+                app(AdviserAssignmentService::class)->approve($request, $faculty);
             } else {
                 app(AdviserRequestService::class)->close($request, $faculty, 'declined');
             }

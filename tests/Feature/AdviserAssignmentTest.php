@@ -35,23 +35,23 @@ class AdviserAssignmentTest extends TestCase
         $request = $this->pending($this->faculty());
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $this->app->bind(ValidateCsrfToken::class, EnforceCsrfTokens::class);
-        $url = '/admin/requests/'.$request->id.'/approve';
+        $url = '/faculty/requests/'.$request->id.'/approve';
         $token = str_repeat('a', 40);
-        $this->actingAs($admin)->withSession(['_token' => $token])->post($url)->assertStatus(419);
+        $this->actingAs($request->facultyProfile->user)->withSession(['_token' => $token])->post($url)->assertStatus(419);
         $this->withSession(['_token' => $token])->post($url, ['_token' => 'wrong-token'])->assertStatus(419);
         $this->assertDatabaseCount('adviser_assignments', 0);
         $this->assertSame('pending', $request->fresh()->status);
-        $this->withSession(['_token' => $token])->post($url, ['_token' => $token])->assertRedirect('/admin/assignments')->assertSessionHasNoErrors();
+        $this->withSession(['_token' => $token])->post($url, ['_token' => $token])->assertRedirect('/faculty/assignments')->assertSessionHasNoErrors();
         $this->assertDatabaseCount('adviser_assignments', 1);
     }
 
-    public function test_service_rechecks_admin_role_after_account_changes(): void
+    public function test_service_rechecks_faculty_role_after_account_changes(): void
     {
         $request = $this->pending($this->faculty());
-        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        User::whereKey($admin->id)->update(['role' => User::ROLE_STUDENT]);
-        // The authentication object still says Admin; the service must read the current role.
-        $this->actingAs($admin)->post('/admin/requests/'.$request->id.'/approve')->assertForbidden();
+        $actor = $request->facultyProfile->user;
+        User::whereKey($actor->id)->update(['role' => User::ROLE_STUDENT]);
+        // The authentication object still says Faculty; the service must read the current role.
+        $this->actingAs($actor)->post('/faculty/requests/'.$request->id.'/approve')->assertForbidden();
         $this->assertDatabaseCount('adviser_assignments', 0);
         $this->assertSame('pending', $request->fresh()->status);
     }
@@ -70,13 +70,13 @@ class AdviserAssignmentTest extends TestCase
             }
         });
         try {
-            $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->post('/admin/requests/'.$selected->id.'/approve')->assertSessionHasErrors('assignment');
+            $this->actingAs($selected->facultyProfile->user)->post('/faculty/requests/'.$selected->id.'/approve')->assertSessionHasErrors('assignment');
         } finally {
             Event::forget(QueryExecuted::class);
         }
         $this->assertSame($before, AdviserRequest::orderBy('id')->get()->toArray());
         $this->assertDatabaseCount('adviser_assignments', 0);
-        $this->post('/admin/requests/'.$selected->id.'/approve')->assertSessionHasNoErrors();
+        $this->post('/faculty/requests/'.$selected->id.'/approve')->assertSessionHasNoErrors();
         $this->assertSame('approved', $selected->fresh()->status);
         $this->assertSame('cancelled', $competitor->fresh()->status);
         $this->assertSame('pending', $unrelated->fresh()->status);
@@ -85,7 +85,7 @@ class AdviserAssignmentTest extends TestCase
     public function test_database_rejects_a_second_assignment_for_one_proposal(): void
     {
         $request = $this->pending($this->faculty());
-        $assignment = app(AdviserAssignmentService::class)->approve($request, User::factory()->create(['role' => User::ROLE_ADMIN]));
+        $assignment = app(AdviserAssignmentService::class)->approve($request, $request->facultyProfile->user);
         $this->expectException(QueryException::class);
         $assignment->replicate()->save();
     }
@@ -105,7 +105,7 @@ class AdviserAssignmentTest extends TestCase
         return app(AdviserRequestService::class)->submit($proposal, $faculty, $student);
     }
 
-    public function test_admin_approval_assigns_once_cancels_competitors_and_preserves_scores(): void
+    public function test_faculty_acceptance_assigns_once_cancels_competitors_and_preserves_scores(): void
     {
         $faculty = $this->faculty();
         $other = $this->faculty();
@@ -114,12 +114,12 @@ class AdviserAssignmentTest extends TestCase
         $competitor = app(AdviserRequestService::class)->submit($proposal, $other, $request->studentProfile->user);
         $scores = $proposal->recommendations()->get()->toArray();
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $url = '/admin/requests/'.$request->id.'/approve';
-        $this->actingAs($admin)->get('/admin/requests')->assertOk()->assertSee('Approve &amp; Assign', false);
-        $this->post($url, ['faculty_profile_id' => $other->id, 'approved_by' => 999])->assertRedirect('/admin/assignments')->assertSessionHas('status', 'adviser-assigned');
+        $url = '/faculty/requests/'.$request->id.'/approve';
+        $this->actingAs($faculty->user)->get('/faculty/requests')->assertOk()->assertSee('Accept Request', false);
+        $this->post($url, ['faculty_profile_id' => $other->id, 'approved_by' => 999])->assertRedirect('/faculty/assignments')->assertSessionHas('status', 'adviser-assigned');
         $assignment = AdviserAssignment::sole();
         $this->assertSame($faculty->id, $assignment->faculty_profile_id);
-        $this->assertSame($admin->id, $assignment->approved_by);
+        $this->assertSame($faculty->user_id, $assignment->approved_by);
         $this->assertSame('active', $assignment->status);
         $this->assertNotNull($assignment->assigned_at);
         $this->assertSame('approved', $request->fresh()->status);
@@ -132,9 +132,9 @@ class AdviserAssignmentTest extends TestCase
         $this->assertSame($scores, $proposal->recommendations()->get()->toArray());
         $before = $assignment->toArray();
         $this->travel(1)->hour();
-        $this->post($url)->assertRedirect('/admin/assignments')->assertSessionHasNoErrors();
+        $this->post($url)->assertRedirect('/faculty/assignments')->assertSessionHasNoErrors();
         $this->assertSame($before, $assignment->fresh()->toArray());
-        $this->post('/admin/requests/'.$competitor->id.'/approve')->assertSessionHasErrors('assignment');
+        $this->actingAs($other->user)->post('/faculty/requests/'.$competitor->id.'/approve')->assertSessionHasErrors('assignment');
         $this->assertDatabaseCount('adviser_assignments', 1);
         $this->actingAs($request->studentProfile->user)->get('/student/proposals/'.$proposal->id)->assertSee('Assigned Adviser')->assertSee($faculty->user->name);
     }
@@ -146,26 +146,31 @@ class AdviserAssignmentTest extends TestCase
         $second = $this->pending($faculty);
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         app(AdvisoryThresholdService::class)->updateLimit($faculty, $admin, 1);
-        $this->actingAs($admin)->post('/admin/requests/'.$first->id.'/approve')->assertSessionHasNoErrors();
-        $this->post('/admin/requests/'.$second->id.'/approve')->assertRedirect('/admin/requests')->assertSessionHasErrors('assignment');
+        $this->actingAs($faculty->user)->post('/faculty/requests/'.$first->id.'/approve')->assertSessionHasNoErrors();
+        $this->post('/faculty/requests/'.$second->id.'/approve')->assertRedirect('/faculty/requests')->assertSessionHasErrors('assignment');
         $this->assertSame('pending', $second->fresh()->status);
         $this->assertDatabaseCount('adviser_assignments', 1);
         app(AdvisoryThresholdService::class)->updateLimit($faculty, $admin, 2);
-        $this->post('/admin/requests/'.$second->id.'/approve')->assertSessionHasNoErrors();
+        $this->post('/faculty/requests/'.$second->id.'/approve')->assertSessionHasNoErrors();
         $this->assertDatabaseCount('adviser_assignments', 2);
         $this->assertSame('FULL', app(AdvisoryThresholdService::class)->forFaculties([$faculty])[$faculty->id]['status']);
     }
 
-    public function test_only_admin_can_approve_and_view_all_assignments(): void
+    public function test_only_requested_faculty_can_accept_and_admin_actions_are_removed(): void
     {
         $request = $this->pending($this->faculty());
-        $url = '/admin/requests/'.$request->id.'/approve';
+        $url = '/faculty/requests/'.$request->id.'/approve';
         $this->post($url)->assertRedirect('/login');
-        foreach ([$request->studentProfile->user, $request->facultyProfile->user] as $actor) {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        foreach ([$request->studentProfile->user, $admin] as $actor) {
             $this->actingAs($actor)->post($url)->assertForbidden();
-            $this->get('/admin/assignments')->assertForbidden();
-            $this->get('/'.$actor->role.'/requests')->assertDontSee('Approve &amp; Assign', false);
+            $this->get('/'.$actor->role.'/requests')->assertDontSee('Accept Request', false);
         }
+        $this->actingAs($admin)->get('/admin/requests')->assertOk()->assertDontSee('Decline Request');
+        $this->post('/admin/requests/'.$request->id.'/approve')->assertNotFound();
+        $this->patch('/admin/requests/'.$request->id.'/decline')->assertNotFound();
+        $this->actingAs($this->faculty()->user)->post($url)->assertNotFound();
+        $this->actingAs($request->facultyProfile->user)->get('/faculty/requests')->assertOk()->assertSee('Accept Request')->assertSee('Decline Request');
         $this->assertDatabaseCount('adviser_assignments', 0);
     }
 
@@ -175,8 +180,8 @@ class AdviserAssignmentTest extends TestCase
         $second = $this->pending($this->faculty());
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $service = app(AdviserAssignmentService::class);
-        $service->approve($first, $admin);
-        $service->approve($second, $admin);
+        $service->approve($first, $first->facultyProfile->user);
+        $service->approve($second, $second->facultyProfile->user);
         $this->actingAs($first->studentProfile->user)->get('/student/assignments')->assertOk()->assertSee($first->researchProposal->title)->assertDontSee($second->researchProposal->title);
         $this->actingAs($first->facultyProfile->user)->get('/faculty/assignments')->assertOk()->assertSee($first->researchProposal->title)->assertDontSee($second->researchProposal->title)->assertSee('Assigned Students');
         $this->actingAs($admin)->get('/admin/assignments')->assertOk()->assertSee($first->researchProposal->title)->assertSee($second->researchProposal->title);
@@ -187,10 +192,10 @@ class AdviserAssignmentTest extends TestCase
     {
         $request = $this->pending($this->faculty());
         app(AdviserRequestService::class)->close($request, $request->studentProfile->user, 'cancelled');
-        $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->post('/admin/requests/'.$request->id.'/approve')->assertSessionHasErrors('assignment');
+        $this->actingAs($request->facultyProfile->user)->post('/faculty/requests/'.$request->id.'/approve')->assertSessionHasErrors('assignment');
         $other = $this->pending($this->faculty());
         $other->facultyProfile->user->forceFill(['role' => User::ROLE_STUDENT])->save();
-        $this->post('/admin/requests/'.$other->id.'/approve')->assertSessionHasErrors('assignment');
+        $this->actingAs($other->facultyProfile->user)->post('/faculty/requests/'.$other->id.'/approve')->assertForbidden();
         $this->assertDatabaseCount('adviser_assignments', 0);
     }
 
@@ -200,7 +205,7 @@ class AdviserAssignmentTest extends TestCase
         $other = $this->faculty();
         $assignment = $request->researchProposal->assignment()->make();
         $assignment->forceFill(['faculty_profile_id' => $other->id, 'assigned_at' => now(), 'status' => 'active'])->save();
-        $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->post('/admin/requests/'.$request->id.'/approve')->assertSessionHasErrors('assignment');
+        $this->actingAs($request->facultyProfile->user)->post('/faculty/requests/'.$request->id.'/approve')->assertSessionHasErrors('assignment');
         $this->assertSame($other->id, $assignment->fresh()->faculty_profile_id);
         $this->assertSame('pending', $request->fresh()->status);
     }
@@ -215,8 +220,8 @@ class AdviserAssignmentTest extends TestCase
             throw new RuntimeException('secret database failure');
         });
         try {
-            $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->post('/admin/requests/'.$request->id.'/approve')->assertRedirect('/admin/requests')->assertSessionHasErrors('assignment');
-            $this->get('/admin/requests')->assertSee('No partial approval was kept.')->assertDontSee('secret database failure');
+            $this->actingAs($request->facultyProfile->user)->post('/faculty/requests/'.$request->id.'/approve')->assertRedirect('/faculty/requests')->assertSessionHasErrors('assignment');
+            $this->get('/faculty/requests')->assertSee('No partial approval was kept.')->assertDontSee('secret database failure');
         } finally {
             Event::forget('eloquent.updating: '.AdviserRequest::class);
         }
@@ -229,10 +234,12 @@ class AdviserAssignmentTest extends TestCase
     {
         $request = $this->pending($this->faculty());
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        app(AdviserAssignmentService::class)->approve($request, $admin);
+        $assignment = app(AdviserAssignmentService::class)->approve($request, $request->facultyProfile->user);
+        // Historical assignments may still reference a former Admin approver.
+        $assignment->forceFill(['approved_by' => $admin->id])->save();
         $request->researchProposal->forceFill(['title' => '<script>alert(1)</script>'])->save();
         $admin->delete();
-        $this->actingAs($request->studentProfile->user)->get('/student/assignments')->assertOk()->assertSee('<script>alert(1)</script>')->assertDontSee('<script>alert(1)</script>', false)->assertSee('Former Admin account')->assertDontSee($request->researchProposal->file_path);
+        $this->actingAs($request->studentProfile->user)->get('/student/assignments')->assertOk()->assertSee('<script>alert(1)</script>')->assertDontSee('<script>alert(1)</script>', false)->assertSee('Former account')->assertDontSee($request->researchProposal->file_path);
         $this->assertSame(1, $request->facultyProfile->activeAssignments()->count());
     }
 }

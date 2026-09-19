@@ -212,6 +212,12 @@ Route::middleware([
         )
             ->name('assignments.index');
 
+        Route::post(
+            '/requests/{adviserRequest}/approve',
+            [AdviserAssignmentController::class, 'approve']
+        )
+            ->name('requests.approve');
+
         Route::patch(
             '/requests/{adviserRequest}/decline',
             [AdviserRequestController::class, 'decline']
@@ -328,17 +334,9 @@ Route::middleware([
         )
             ->name('assignments.index');
 
-        Route::post(
-            '/requests/{adviserRequest}/approve',
-            [AdviserAssignmentController::class, 'approve']
-        )
-            ->name('requests.approve');
 
-        Route::patch(
-            '/requests/{adviserRequest}/decline',
-            [AdviserRequestController::class, 'decline']
-        )
-            ->name('requests.decline');
+
+
 
         Route::get(
             '/advisory-limits',

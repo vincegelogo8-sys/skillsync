@@ -57,7 +57,7 @@ class AdviserRequestService
             $request = AdviserRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
             $actor = User::findOrFail($actor->id);
             $canCancel = $status === 'cancelled' && $actor->role === User::ROLE_STUDENT && $actor->studentProfile?->id === $request->student_profile_id;
-            $canDecline = $status === 'declined' && ($actor->role === User::ROLE_ADMIN || ($actor->role === User::ROLE_FACULTY && $actor->facultyProfile?->id === $request->faculty_profile_id));
+            $canDecline = $status === 'declined' && ($actor->role === User::ROLE_FACULTY && $actor->facultyProfile?->id === $request->faculty_profile_id);
             abort_unless($canCancel || $canDecline, 404);
             if ($request->status !== 'pending') {
                 throw ValidationException::withMessages(['adviser_request' => 'Only pending requests can be cancelled or declined.']);

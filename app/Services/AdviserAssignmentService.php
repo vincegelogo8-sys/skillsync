@@ -15,15 +15,16 @@ class AdviserAssignmentService
 {
     public function __construct(private AdvisoryThresholdService $threshold) {}
 
-    public function approve(AdviserRequest $request, User $admin): AdviserAssignment
+    public function approve(AdviserRequest $request, User $actor): AdviserAssignment
     {
-        return DB::transaction(function () use ($request, $admin) {
-            $admin = User::findOrFail($admin->id);
-            abort_unless($admin->role === User::ROLE_ADMIN, 403);
+        return DB::transaction(function () use ($request, $actor) {
+            $actor = User::findOrFail($actor->id);
+            abort_unless($actor->role === User::ROLE_FACULTY, 403);
             // All request/assignment writes acquire the proposal before faculty/request rows.
             $proposal = ResearchProposal::whereKey($request->research_proposal_id)->lockForUpdate()->firstOrFail();
             $faculty = FacultyProfile::whereKey($request->faculty_profile_id)->lockForUpdate()->firstOrFail();
             $request = AdviserRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
+            abort_unless($actor->facultyProfile?->id === $request->faculty_profile_id, 404);
             $assignment = $proposal->assignment()->lockForUpdate()->first();
             // Safe replay: retain the original assignment, approver and timestamp.
             if ($request->status === 'approved' && $assignment?->status === 'active' && $assignment->faculty_profile_id === $faculty->id) {
@@ -44,7 +45,7 @@ class AdviserAssignmentService
                 throw ValidationException::withMessages(['assignment' => 'This adviser is FULL. Approval did not change the request or create an assignment.']);
             }
             $assignment = $proposal->assignment()->make();
-            $assignment->forceFill(['faculty_profile_id' => $faculty->id, 'approved_by' => $admin->id, 'assigned_at' => now(), 'status' => AdviserAssignment::STATUS_ACTIVE])->save();
+            $assignment->forceFill(['faculty_profile_id' => $faculty->id, 'approved_by' => $actor->id, 'assigned_at' => now(), 'status' => AdviserAssignment::STATUS_ACTIVE])->save();
             $request->status = 'approved';
             $request->active_slot = 1;
             $request->responded_at = now();

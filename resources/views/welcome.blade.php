@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="SKILLSYNC helps students find suitable research advisers through skills matching and transparent recommendations, with final approval by Admin.">
+        <meta name="description" content="SKILLSYNC helps students find suitable research advisers through skills matching and transparent recommendations, with acceptance by the requested adviser.">
         <title>SKILLSYNC | Research Adviser Recommendations</title>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -36,7 +36,7 @@
 
             <div id="main-content" class="landing-copy landing-container" tabindex="-1">
                 <h1>Match students with research advisers</h1>
-                <p>SKILLSYNC connects student research with faculty expertise through intelligent skills matching. Explore adviser recommendations based on research alignment, advising competency, preferences, and skills&mdash;with final approval by Admin.</p>
+                <p>SKILLSYNC connects student research with faculty expertise through intelligent skills matching. Explore adviser recommendations based on research alignment, advising competency, preferences, and skills&mdash;with acceptance by the requested adviser.</p>
             </div>
         </div>
 
@@ -61,7 +61,7 @@
                     <p class="landing-eyebrow">About SKILLSYNC</p>
                     <h2 id="about-title" class="landing-section-title">The right expertise.<br>A stronger research journey.</h2>
                     <p class="landing-body">Every research idea deserves informed guidance. SKILLSYNC helps students and faculty find common ground through an understandable, skills-based recommendation process.</p>
-                    <p class="landing-body mt-4">Recommendations support the decision. Your department's Admin reviews and approves the final adviser assignment.</p>
+                    <p class="landing-body mt-4">Recommendations support the decision. The requested faculty adviser reviews and accepts or declines the request.</p>
                 </div>
                 <ol class="landing-steps">
                     <li>
@@ -74,7 +74,7 @@
                     </li>
                     <li>
                         <span class="landing-step-number" aria-hidden="true">03</span>
-                        <div><h3>Move forward with guidance</h3><p>Adviser availability and Admin approval help turn a recommendation into an informed assignment.</p></div>
+                        <div><h3>Move forward with guidance</h3><p>Adviser availability and adviser acceptance help turn a recommendation into an informed assignment.</p></div>
                     </li>
                 </ol>
             </section>

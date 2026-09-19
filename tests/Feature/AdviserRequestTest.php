@@ -153,7 +153,7 @@ class AdviserRequestTest extends TestCase
         $this->assertDatabaseCount('adviser_requests', 0);
     }
 
-    public function test_lists_are_scoped_and_only_recipient_or_admin_can_decline(): void
+    public function test_lists_are_scoped_and_only_recipient_can_decline(): void
     {
         [$student, $proposal, $faculty] = $this->setupProposal();
         [$otherStudent, $otherProposal, $otherFaculty] = $this->setupProposal();
@@ -169,7 +169,7 @@ class AdviserRequestTest extends TestCase
         $this->assertNull($request->fresh()->active_slot);
         $replacement = $service->submit($proposal, $faculty, $student);
         $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->get('/admin/requests')->assertSee($proposal->title)->assertSee($otherProposal->title);
-        $this->patch('/admin/requests/'.$replacement->id.'/decline')->assertRedirect('/admin/requests');
+        $this->patch('/admin/requests/'.$replacement->id.'/decline')->assertNotFound();
         $this->assertDatabaseCount('adviser_assignments', 0);
     }
 

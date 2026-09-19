@@ -117,11 +117,11 @@ class EndToEndWorkflowTest extends TestCase
 
         $this->login($faculty, 'workflow-password');
         $this->get('/faculty/requests')->assertOk()->assertSee($proposal->title)->assertSee('Pending');
-        $this->send('post', '/admin/requests/'.$request->id.'/approve')->assertForbidden();
+        $this->send('post', '/faculty/requests/'.$request->id.'/approve')->assertSessionHasNoErrors()->assertRedirect('/faculty/assignments');
         $this->login($admin, 'password');
-        $this->send('post', '/admin/requests/'.$request->id.'/approve')->assertSessionHasNoErrors()->assertRedirect('/admin/assignments');
+        $this->send('post', '/admin/requests/'.$request->id.'/approve')->assertNotFound();
         $assignment = AdviserAssignment::sole();
-        $this->assertSame($admin->id, $assignment->approved_by);
+        $this->assertSame($faculty->id, $assignment->approved_by);
         $this->assertSame('active', $assignment->status);
         $this->assertSame('approved', $request->fresh()->status);
         $this->capture('admin-'.$type, $this->get('/admin/dashboard')->assertOk());
