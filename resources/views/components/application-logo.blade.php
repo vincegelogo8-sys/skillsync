@@ -1,0 +1,1 @@
+<x-skillsync-mark {{ $attributes }} />
