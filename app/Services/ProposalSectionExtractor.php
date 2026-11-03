@@ -9,23 +9,7 @@ class ProposalSectionExtractor
     /** Preserve boundaries until sections have been identified. */
     public function normalize(string $text): string
     {
-        $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
-        $text = str_replace(["\r\n", "\r", "\f", "\u{2028}", "\u{2029}"], "\n", $text);
-        $text = preg_replace('/\x{00AD}\h*\n\h*/u', '', $text);
-        $text = str_replace("\u{00AD}", '', $text);
-        $text = str_replace(["\u{2010}", "\u{2011}", "\u{2012}", "\u{2013}", "\u{2014}", "\u{2212}"], '-', $text);
-        // Preserve common meaningful hyphens; repair discretionary word breaks.
-        $text = preg_replace_callback('/(\p{L}+)-\h*\n\h*(\p{Ll}+)/u', function ($match) {
-            $hyphen = in_array(mb_strtolower($match[1]), ['web', 'real', 'face', 'to', 'based', 'school', 'campus'], true) ? '-' : '';
-
-            return $match[1].$hyphen.$match[2];
-        }, $text);
-        $text = preg_replace('/[\x00-\x08\x0B\x0E-\x1F\x7F]/u', '', $text);
-        $text = preg_replace('/\h+/u', ' ', $text);
-        $text = preg_replace('/ *\n */u', "\n", $text);
-        $text = preg_replace('/\n{3,}/u', "\n\n", $text);
-
-        return trim($text);
+        return app(ProposalTextNormalizer::class)->normalize($text);
     }
 
     /** The upload title is trusted when supplied; otherwise retain every candidate. */

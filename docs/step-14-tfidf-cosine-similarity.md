@@ -1,11 +1,17 @@
 # Step 14: Local TF-IDF and Cosine Similarity
 
+> **Historical implementation note:** The standalone similarity service described
+> here remains in the codebase, but the current recommendation workflow does not
+> call it and does not display a cosine/RTA percentage. Current recommendations
+> use supported direct and evidence-backed related expertise categories instead.
+> See [current matching behavior](rta-only-cleanup.md).
+
 ## Inspection and scope
 
-The application already stores extracted proposal text, analysis results, canonical
-faculty expertise, and faculty proficiency. Step 13 provides multi-expertise
-strength. Step 14 adds a separate local similarity service. No package, migration,
-route, frontend change, or external API is required.
+The application stores extracted proposal text, validated analysis results,
+canonical faculty expertise, and faculty proficiency. Similarity is local and
+uses the saved analysis and current faculty records; it does not call an external
+API or alter recommendation data.
 
 Complete source:
 
@@ -17,16 +23,17 @@ Complete source:
 ## Inputs and normalization
 
 `forProposal($analysis, $faculties)` requires completed proposal analysis and saved
-faculty profiles. Both similarity entry points now use only the authoritative stored
-title plus extracted objectives from ProposalSectionExtractor. Full extracted text,
-abstracts, and keyword lists are not appended. See [Title and objectives analysis](proposal-title-objectives.md).
+faculty profiles. Proposal analysis extracts computing skills from the proposal's
+relevant extracted text and stores a research representation containing its title,
+identified concepts, and supporting proposal context. Similarity compares that
+saved representation; generation does not rerun extraction or NLP.
 
-Each faculty document contains its current expertise names once. One database
-query retrieves expertise for all supplied faculty IDs, avoiding stale preloaded
+Each faculty document contains only the current expertise area names. One database
+query retrieves entries for all supplied faculty IDs, avoiding stale preloaded
 relationships and one query per faculty. Duplicate faculty IDs are collapsed.
 Profiles with no expertise remain in the corpus as empty documents and score zero.
-Proficiency values, preferences, competency, and assessment scores are not text
-inputs. There is no separate technical-skills field in the current faculty model.
+Legacy proficiency values, preferences, competency, and assessment scores are not
+text inputs.
 
 Text processing lowercases Unicode words, separates punctuation and hyphens,
 removes stop words using `config/proposal_analysis.php`, and counts remaining
@@ -60,10 +67,9 @@ are clamped to 0–100 to handle floating-point drift and retain full precision;
 display with `number_format($score, 2)`.
 
 This is lexical similarity, not semantic understanding or a calibrated probability.
-Unexpanded synonyms and acronyms can differ. Long unrelated document sections can
-lower similarity against short expertise lists. The controlled expertise signal
-from Step 13 will be combined with cosine in Step 15. Step 14 applies no topic
-alignment or final-score weights and does not rank or assign faculty.
+Unexpanded synonyms and acronyms can differ. The displayed Research Topic Alignment
+is the cosine percentage alone. Capacity checks are separate and do not enter this
+calculation.
 
 ## Service interface and manual example
 

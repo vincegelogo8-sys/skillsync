@@ -19,4 +19,22 @@ class AccountProvisioningService
 
         return $user;
     }
+
+    public function update(User $user, array $attributes): User
+    {
+        if ($user->email !== $attributes['email']) {
+            $user->email_verified_at = null;
+        }
+
+        $user->name = $attributes['name'];
+        $user->email = $attributes['email'];
+
+        if (! empty($attributes['password'])) {
+            $user->password = Hash::make($attributes['password']);
+        }
+
+        $user->save();
+
+        return $user;
+    }
 }

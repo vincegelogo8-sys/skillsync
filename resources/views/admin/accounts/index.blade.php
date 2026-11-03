@@ -2,7 +2,7 @@
     <x-slot name="header">
         <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Student and Faculty Accounts') }}</h1>
     </x-slot>
-    <x-slot name="description">{{ __('Manage access for Student and Faculty accounts.') }}</x-slot>
+
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -24,6 +24,7 @@
                                 <th scope="col" class="px-4 py-2">{{ __('Email') }}</th>
                                 <th scope="col" class="px-4 py-2">{{ __('Account Type') }}</th>
                                 <th scope="col" class="px-4 py-2">{{ __('Created') }}</th>
+                                <th scope="col" class="px-4 py-2">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -33,9 +34,10 @@
                                     <td class="px-4 py-2">{{ $account->email }}</td>
                                     <td class="px-4 py-2">{{ __(ucfirst($account->role)) }}</td>
                                     <td class="px-4 py-2">{{ $account->created_at?->format('M j, Y') }}</td>
+                                    <td class="px-4 py-2"><a href="{{ route('admin.accounts.edit', $account) }}" class="text-indigo-600 underline hover:text-indigo-800">{{ __('Edit') }}</a></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="px-4 py-2 text-gray-600">{{ __('No Student or Faculty accounts yet.') }}</td></tr>
+                                <tr><td colspan="5" class="px-4 py-2 text-gray-600">{{ __('No Student or Faculty accounts yet.') }}</td></tr>
                             @endforelse
                         </tbody>
                     </table>

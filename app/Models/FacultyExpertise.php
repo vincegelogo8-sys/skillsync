@@ -9,7 +9,7 @@ class FacultyExpertise extends Model
 {
     protected $table = 'faculty_expertise';
 
-    protected $fillable = ['expertise_area', 'proficiency_score'];
+    protected $fillable = ['expertise_area', 'technical_skills', 'proficiency_score'];
 
     protected function casts(): array
     {

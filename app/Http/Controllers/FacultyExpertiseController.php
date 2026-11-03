@@ -25,8 +25,17 @@ class FacultyExpertiseController extends Controller
         }
 
         return view('faculty.expertise.index', $this->viewData($request) + [
-            'entries' => $request->profile()->expertise()->orderBy('expertise_area')->get(),
+            'entries' => $request->profile()->expertise()
+                ->whereIn('expertise_area', config('expertise.areas'))
+                ->orderBy('expertise_area')->get(),
         ]);
+    }
+
+    public function updateSkills(FacultyExpertiseRequest $request, FacultyExpertiseService $service): RedirectResponse
+    {
+        $service->saveCategories($request->profile(), $request->validated('skills', []));
+
+        return redirect()->route('faculty.expertise.index')->with('status', 'faculty-skills-updated');
     }
 
     public function edit(FacultyExpertiseRequest $request): View
@@ -44,21 +53,21 @@ class FacultyExpertiseController extends Controller
 
         $service->save($request->profile(), $request->validated());
 
-        return $this->saved($request, 'Expertise added successfully.');
+        return $this->saved($request, 'Faculty skill added successfully.');
     }
 
     public function update(FacultyExpertiseRequest $request, FacultyExpertiseService $service): RedirectResponse
     {
         $service->save($request->profile(), $request->validated(), $request->route('expertise'));
 
-        return $this->saved($request, 'Expertise updated successfully.');
+        return $this->saved($request, 'Faculty skill updated successfully.');
     }
 
     public function destroy(FacultyExpertiseRequest $request, FacultyExpertiseService $service): RedirectResponse
     {
         $service->delete($request->profile(), $request->route('expertise'));
 
-        return $this->saved($request, 'Expertise removed successfully.');
+        return $this->saved($request, 'Faculty skill removed successfully.');
     }
 
     private function viewData(FacultyExpertiseRequest $request): array
@@ -67,6 +76,9 @@ class FacultyExpertiseController extends Controller
 
         return [
             'profile' => $request->profile(),
+            'canManage' => $admin,
+            'canUpdateSkills' => ! $admin && $request->user()->role === User::ROLE_FACULTY,
+            'isFaculty' => ! $admin && $request->user()->role === User::ROLE_FACULTY,
             'areas' => config('expertise.areas'),
             'routePrefix' => $admin ? 'admin.expertise.' : 'faculty.expertise.',
             'routeParameters' => $admin ? ['facultyProfile' => $request->profile()] : [],
@@ -83,6 +95,6 @@ class FacultyExpertiseController extends Controller
     private function completeProfile(): RedirectResponse
     {
         return redirect()->route('faculty.profile.edit')
-            ->with('status', 'complete-profile-for-expertise');
+            ->with('status', 'complete-profile-for-skills');
     }
 }

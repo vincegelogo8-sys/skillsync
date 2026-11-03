@@ -1,0 +1,25 @@
+Title: Crowdsourced School Infrastructure Maintenance
+Abstract
+School infrastructure maintenance often relies on paper reports and delayed inspections.
+This project develops a crowdsourcing platform for damage reporting and maintenance prioritization.
+Mobile applications allow community members to submit geotagged photographs of damaged facilities.
+A maintenance dashboard displays repair requests, location maps, and repair status.
+Statement of the Problem
+Fragmented damage reporting prevents timely maintenance prioritization.
+Facility managers lack reliable location data and transparent repair tracking.
+Objectives
+Develop a crowdsourcing platform for school infrastructure maintenance.
+Identify and categorize recurring maintenance issues. Design and implement geospatial visualization.
+Compare response times before and after deployment. Assess willingness to establish transparent repair tracking.
+Methodology
+Geospatial visualization groups geotagged reports by location.
+Duplicate report detection reduces redundant repair requests.
+Priority scheduling considers damage severity and safety risks.
+Background
+Community participation can improve public facility management and accountability.
+Scope
+The pilot covers classrooms, drainage facilities, and electrical fixtures.
+References
+Smith, J. (2023). Quantum Cryptography and Blockchain. Example University Press.
+Acknowledgements
+Submitted by: Maria Santos, Department of Computer Science.

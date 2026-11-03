@@ -36,7 +36,7 @@
 
             <div id="main-content" class="landing-copy landing-container" tabindex="-1">
                 <h1>Match students with research advisers</h1>
-                <p>SKILLSYNC connects student research with faculty expertise through intelligent skills matching. Explore adviser recommendations based on research alignment, advising competency, preferences, and skills&mdash;with acceptance by the requested adviser.</p>
+                <p>SKILLSYNC connects student research with faculty skills through category matching. Explore adviser recommendations based on research topic alignment&mdash;with acceptance by the requested adviser.</p>
             </div>
         </div>
 
@@ -44,7 +44,7 @@
             <section class="landing-features landing-container" aria-label="How SKILLSYNC supports your research">
                 <article class="landing-card">
                     <h2>Research Topic Submission</h2>
-                    <p>Bring your research idea forward. Submit a proposal to identify the expertise your project needs.</p>
+                    <p>Bring your research idea forward. Submit a proposal to identify the skills your project needs.</p>
                 </article>
                 <article class="landing-card">
                     <h2>Skills-Based Recommendations</h2>
@@ -59,14 +59,14 @@
             <section id="about" class="landing-about landing-container" aria-labelledby="about-title">
                 <div>
                     <p class="landing-eyebrow">About SKILLSYNC</p>
-                    <h2 id="about-title" class="landing-section-title">The right expertise.<br>A stronger research journey.</h2>
+                    <h2 id="about-title" class="landing-section-title">The right skills.<br>A stronger research journey.</h2>
                     <p class="landing-body">Every research idea deserves informed guidance. SKILLSYNC helps students and faculty find common ground through an understandable, skills-based recommendation process.</p>
                     <p class="landing-body mt-4">Recommendations support the decision. The requested faculty adviser reviews and accepts or declines the request.</p>
                 </div>
                 <ol class="landing-steps">
                     <li>
                         <span class="landing-step-number" aria-hidden="true">01</span>
-                        <div><h3>Start with your research</h3><p>Your proposal provides the topics, technologies, and expertise areas used in matching.</p></div>
+                        <div><h3>Start with your research</h3><p>Your proposal identifies the research concepts used in matching.</p></div>
                     </li>
                     <li>
                         <span class="landing-step-number" aria-hidden="true">02</span>

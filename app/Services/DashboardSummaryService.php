@@ -18,7 +18,6 @@ class DashboardSummaryService
         $proposals = ResearchProposal::query();
         $profile = null;
         $capacity = null;
-        $assessment = null;
         if ($role === User::ROLE_STUDENT) {
             $profile = $user->studentProfile;
             $id = $profile?->id ?? 0;
@@ -32,7 +31,6 @@ class DashboardSummaryService
             $assignments->where('faculty_profile_id', $id);
             if ($profile) {
                 $capacity = app(AdvisoryThresholdService::class)->forFaculties([$profile])[$id];
-                $assessment = app(SkillsAssessmentService::class)->score($profile->latestCompletedAssessment);
             }
         }
         $metrics = [
@@ -44,7 +42,6 @@ class DashboardSummaryService
             $metrics[] = ['label' => 'Awaiting Analysis', 'value' => (clone $proposals)->whereDoesntHave('analysis', fn ($query) => $query->whereNotNull('analyzed_at'))->count(), 'route' => $role.'.proposals.index'];
         } else {
             $metrics[] = ['label' => 'Advisory Load', 'value' => $capacity ? $capacity['load'].' / '.$capacity['limit'].' · '.$capacity['status'] : 'Complete your profile', 'route' => 'faculty.assignments.index'];
-            $metrics[] = ['label' => 'Latest Completed Assessment', 'value' => $assessment === null ? 'Not completed' : number_format($assessment, 2).'%', 'route' => 'faculty.assessment.index'];
         }
         if ($role === User::ROLE_ADMIN) {
             $metrics[] = ['label' => 'Student Accounts', 'value' => User::where('role', User::ROLE_STUDENT)->count(), 'route' => 'admin.accounts.index'];

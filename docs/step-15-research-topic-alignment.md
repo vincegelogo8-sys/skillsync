@@ -1,5 +1,11 @@
 # Step 15: Research Topic Alignment
 
+> **Historical implementation note:** This service remains independently
+> implemented, but current recommendation generation does not call it or display
+> an RTA percentage. Current recommendations qualify matching expertise
+> categories, retain evidence explanations, and display no ranking or percentage.
+> See [current matching behavior](rta-only-cleanup.md).
+
 ## Inspection and scope
 
 Step 13 provides multi-expertise strength; Step 14 provides shared-corpus TF-IDF

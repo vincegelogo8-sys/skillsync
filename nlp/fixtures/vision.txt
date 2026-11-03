@@ -1,0 +1,21 @@
+Title: Deep Learning for Plant Disease Image Classification
+Abstract
+This study investigates computer vision for automated plant disease detection.
+Convolutional neural networks classify leaf images into healthy and diseased categories.
+Transfer learning adapts pretrained image classification models to a small agricultural dataset.
+Image processing removes background noise and normalizes illumination.
+Objectives
+Develop plant disease detection using convolutional neural networks.
+Evaluate image classification under variable lighting conditions.
+Compare transfer learning with training from scratch.
+Methodology
+Data augmentation applies rotations and color transformations to leaf images.
+Stratified cross-validation estimates classification accuracy on unseen samples.
+Confusion matrices reveal false positives and confusion between disease categories.
+Background
+Manual crop inspection is slow and requires agricultural expertise.
+Computer vision can support early diagnosis and reduce crop losses.
+Scope
+The prototype processes tomato leaf images using a mobile application.
+References
+Garcia, A. (2022). School Infrastructure Maintenance. Fictional Press.

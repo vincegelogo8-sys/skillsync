@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\AdviserRequest;
+use App\Services\EmailLinkGenerator;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -24,7 +25,7 @@ class AdviserRequestDeclinedNotification extends Notification
             ->line('Research Title: '.$this->request->researchProposal->title)
             ->line('Faculty Adviser: '.$this->request->facultyProfile->user->name)
             ->line('You may return to SKILLSYNC and review the other available adviser recommendations.')
-            ->action('View Adviser Recommendations', route('student.recommendations.index', $this->request->research_proposal_id))
+            ->action('View Adviser Recommendations', app(EmailLinkGenerator::class)->route('student.recommendations.index', $this->request->research_proposal_id))
             ->salutation("Thank you,\nSKILLSYNC\nResearch Adviser Recommendation System");
     }
 }

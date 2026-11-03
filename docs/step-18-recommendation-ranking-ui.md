@@ -1,5 +1,14 @@
 # Step 18: Recommendation Ranking Blade UI
 
+> **Historical implementation note:** The ranked, percentage-based page described
+> below has been superseded. The current Student recommendations page filters out
+> unmatched faculty, shows direct/related expertise and supporting evidence,
+> sorts qualifying faculty by distinct matched-category count descending, then
+> surname and first name, and displays no percentage, match count, or rank. Admin
+> can review proposal analysis but cannot view or generate student
+> recommendations. Capacity remains separate from matching, and existing request
+> controls are preserved. See [current matching behavior](rta-only-cleanup.md).
+
 ## Inspection and changes
 
 Step 17 already calculates, ranks, and stores faculty recommendations, with

@@ -3,7 +3,7 @@
     $tone = match (strtolower($status)) {
         'approved', 'accepted', 'active', 'available', 'analyzed', 'extracted', 'assigned', 'completed' => 'success',
         'pending', 'uploaded', 'in_progress', 'not analyzed' => 'warning',
-        'declined', 'full', 'extraction_failed' => 'danger',
+        'declined', 'full', 'extraction_failed', 'failed' => 'danger',
         default => 'neutral',
     };
 @endphp

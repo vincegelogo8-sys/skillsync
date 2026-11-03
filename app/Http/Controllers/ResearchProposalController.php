@@ -7,7 +7,6 @@ use App\Models\ResearchProposal;
 use App\Models\User;
 use App\Services\ProposalAnalysisService;
 use App\Services\ProposalExtractionService;
-use App\Services\RecommendationService;
 use App\Services\ResearchProposalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -151,7 +150,7 @@ class ResearchProposalController extends Controller
             $proposal
         );
 
-        if ($extracted->analysis) {
+        if ($extracted->analysis && ! $extracted->analysis->hasCurrentAnalysis()) {
             $analyzer->analyze(
                 $extracted
             );
@@ -177,9 +176,7 @@ class ResearchProposalController extends Controller
     public function refreshExtraction(
         Request $request,
         ResearchProposal $proposal,
-        ProposalExtractionService $extractor,
-        ProposalAnalysisService $analyzer,
-        RecommendationService $recommendations
+        ProposalExtractionService $extractor
     ): RedirectResponse {
         $this->authorizeAccess(
             $request,
@@ -187,27 +184,7 @@ class ResearchProposalController extends Controller
         );
 
         try {
-            DB::transaction(function () use ($request, $proposal, $extractor, $analyzer, $recommendations) {
-                $proposal = ResearchProposal::whereKey($proposal->id)->lockForUpdate()->firstOrFail();
-                $hasRecommendations = $proposal->recommendations()->exists();
-                $refreshed = $extractor->refresh($proposal);
-
-                if ($refreshed->status === 'extracted' && $refreshed->analysis) {
-                    $analyzer->analyze($refreshed);
-                    if ($hasRecommendations) {
-                        try {
-                            $recommendations->generate($refreshed, $request->user());
-                        } catch (ValidationException $exception) {
-                            throw $exception;
-                        } catch (Throwable $exception) {
-                            report($exception);
-                            throw ValidationException::withMessages([
-                                'analysis' => 'Recommendations could not be recalculated. The previous extraction and results were preserved. Please retry.',
-                            ]);
-                        }
-                    }
-                }
-            });
+            $extractor->refresh($proposal);
         } catch (ValidationException $exception) {
             return redirect()
                 ->route(
@@ -272,9 +249,12 @@ class ResearchProposalController extends Controller
             $proposal
         );
 
-        $analyzer->analyze(
-            $proposal
-        );
+        $target = ($request->user()->role === User::ROLE_ADMIN ? 'admin' : 'student').'.proposals.show';
+        try {
+            $analyzer->analyze($proposal);
+        } catch (ValidationException $exception) {
+            return redirect()->route($target, $proposal)->withErrors($exception->errors());
+        }
 
         return redirect()
             ->route(
@@ -285,7 +265,7 @@ class ResearchProposalController extends Controller
                         : 'student'
                 ).'.proposals.show',
                 $proposal
-            );
+            )->with('status', 'proposal-analyzed');
     }
 
     public function download(

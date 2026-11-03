@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use App\Models\ResearchProposal;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -58,6 +59,7 @@ class AdminAccountTest extends TestCase
         $admin = $this->admin();
         $student = User::factory()->create();
         $this->actingAs($admin)->get('/admin/accounts')->assertOk()->assertSee($student->email)
+            ->assertSee(route('admin.accounts.edit', $student))
             ->assertDontSee($student->password, false)->assertDontSee($admin->email);
         $this->get('/admin/accounts/create')->assertOk()->assertSee('value="student"', false)
             ->assertSee('value="faculty"', false)->assertDontSee('value="admin"', false);
@@ -152,5 +154,156 @@ class AdminAccountTest extends TestCase
             ->assertSee($last->name)->assertDontSee($last->name, false);
         $this->get('/admin/accounts?page=2')->assertOk()
             ->assertViewHas('accounts', fn ($accounts) => $accounts->count() === 1);
+    }
+
+    #[DataProvider('accountRoles')]
+    public function test_admin_can_open_edit_page_for_student_and_faculty_accounts(string $role): void
+    {
+        $admin = $this->admin();
+        $account = User::factory()->create(['role' => $role, 'name' => 'Account Holder', 'email' => 'holder@gmail.com']);
+
+        $this->actingAs($admin)->get(route('admin.accounts.edit', $account))
+            ->assertOk()
+            ->assertSee('Account Holder')
+            ->assertSee('holder@gmail.com')
+            ->assertSee(ucfirst($role))
+            ->assertSee('New Password (optional)')
+            ->assertDontSee('name="role"', false)
+            ->assertDontSee('value="'.$account->password.'"', false);
+    }
+
+    public function test_admin_can_update_name_and_email_without_changing_blank_password(): void
+    {
+        $admin = $this->admin();
+        $account = User::factory()->create([
+            'role' => User::ROLE_STUDENT,
+            'email' => 'old@gmail.com',
+            'password' => 'original-password',
+            'email_verified_at' => now(),
+        ]);
+        $passwordHash = $account->password;
+
+        $this->actingAs($admin)->patch(route('admin.accounts.update', $account), [
+            'name' => 'Updated Student',
+            'email' => 'updated@gmail.com',
+            'password' => '',
+            'password_confirmation' => '',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.accounts.index'));
+
+        $account->refresh();
+        $this->assertSame('Updated Student', $account->name);
+        $this->assertSame('updated@gmail.com', $account->email);
+        $this->assertSame($passwordHash, $account->password);
+        $this->assertNull($account->email_verified_at);
+        $this->assertSame(User::ROLE_STUDENT, $account->role);
+        $this->get(route('admin.accounts.index'))->assertSee('Account updated successfully.');
+    }
+
+    public function test_admin_can_set_a_new_confirmed_password(): void
+    {
+        $admin = $this->admin();
+        $account = User::factory()->create(['role' => User::ROLE_FACULTY, 'email' => 'faculty@gmail.com']);
+        $passwordHash = $account->password;
+
+        $this->actingAs($admin)->patch(route('admin.accounts.update', $account), [
+            'name' => $account->name,
+            'email' => $account->email,
+            'password' => 'a-new-secure-password',
+            'password_confirmation' => 'a-new-secure-password',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.accounts.index'));
+
+        $this->assertNotSame($passwordHash, $account->fresh()->password);
+        $this->assertTrue(Hash::check('a-new-secure-password', $account->fresh()->password));
+    }
+
+    public function test_duplicate_email_and_invalid_fields_are_rejected_without_changes(): void
+    {
+        $admin = $this->admin();
+        $account = User::factory()->create(['role' => User::ROLE_STUDENT, 'email' => 'owner@gmail.com']);
+        $other = User::factory()->create(['email' => 'taken@gmail.com']);
+
+        $this->actingAs($admin)->from(route('admin.accounts.edit', $account))
+            ->patch(route('admin.accounts.update', $account), [
+                'name' => 'Should Not Save',
+                'email' => $other->email,
+            ])->assertSessionHasErrors('email');
+
+        $this->patch(route('admin.accounts.update', $account), [
+            'name' => '',
+            'email' => 'not-an-email',
+            'password' => 'short',
+            'password_confirmation' => 'different',
+        ])->assertSessionHasErrors(['name', 'email', 'password']);
+
+        $this->assertSame('owner@gmail.com', $account->fresh()->email);
+        $this->assertNotSame('Should Not Save', $account->fresh()->name);
+    }
+
+    public function test_non_admins_and_admin_accounts_cannot_use_edit_routes(): void
+    {
+        $account = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        foreach ([User::ROLE_STUDENT, User::ROLE_FACULTY] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]));
+            $this->get(route('admin.accounts.edit', $account))->assertForbidden();
+            $this->patch(route('admin.accounts.update', $account), [])->assertForbidden();
+        }
+
+        $admin = $this->admin();
+        $this->actingAs($admin)->get(route('admin.accounts.edit', $admin))->assertNotFound();
+        $this->patch(route('admin.accounts.update', $admin), [
+            'name' => 'Changed Admin',
+            'email' => $admin->email,
+        ])->assertForbidden();
+        $this->assertSame($admin->name, $admin->fresh()->name);
+    }
+
+    public function test_account_id_profiles_and_proposals_remain_attached_after_update(): void
+    {
+        $admin = $this->admin();
+        $account = User::factory()->create(['role' => User::ROLE_STUDENT, 'email' => 'student@gmail.com']);
+        $studentProfile = $account->studentProfile()->create([
+            'student_number' => 'S-100', 'course' => 'BSIT', 'year_level' => 3, 'section' => 'A',
+        ]);
+        $proposal = $studentProfile->researchProposals()->make();
+        $proposal->forceFill([
+            'title' => 'Existing Proposal', 'file_path' => 'existing-proposal.pdf',
+            'original_filename' => 'proposal.pdf', 'file_type' => 'pdf', 'status' => 'uploaded',
+        ])->save();
+        $accountId = $account->id;
+        $profileId = $studentProfile->id;
+        $proposalId = $proposal->id;
+
+        $facultyAccount = User::factory()->create([
+            'role' => User::ROLE_FACULTY,
+            'email' => 'faculty-before@gmail.com',
+        ]);
+        $facultyProfile = $facultyAccount->facultyProfile()->create(['department' => 'Computing']);
+        $facultyAccountId = $facultyAccount->id;
+        $facultyProfileId = $facultyProfile->id;
+
+        $this->actingAs($admin)->patch(route('admin.accounts.update', $account), [
+            'id' => 999999,
+            'name' => 'Updated Student',
+            'email' => 'student-updated@gmail.com',
+            'role' => User::ROLE_FACULTY,
+            'email_verified_at' => now()->toDateTimeString(),
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame($accountId, $account->fresh()->id);
+        $this->assertSame(User::ROLE_STUDENT, $account->fresh()->role);
+        $this->assertSame($profileId, $account->fresh()->studentProfile->id);
+        $this->assertSame($proposalId, $account->fresh()->studentProfile->researchProposals()->sole()->id);
+        $this->assertDatabaseCount('student_profiles', 1);
+        $this->assertDatabaseCount('research_proposals', 1);
+
+        $this->patch(route('admin.accounts.update', $facultyAccount), [
+            'name' => 'Updated Faculty',
+            'email' => 'faculty-after@gmail.com',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame($facultyAccountId, $facultyAccount->fresh()->id);
+        $this->assertSame(User::ROLE_FACULTY, $facultyAccount->fresh()->role);
+        $this->assertSame($facultyProfileId, $facultyAccount->fresh()->facultyProfile->id);
+        $this->assertDatabaseCount('faculty_profiles', 1);
     }
 }

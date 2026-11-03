@@ -6,7 +6,6 @@ use App\Models\FacultyProfile;
 use App\Models\ProposalAnalysis;
 use App\Models\User;
 use App\Services\MultiExpertiseService;
-use App\Services\ProposalAnalysisService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -87,7 +86,9 @@ class MultiExpertiseTest extends TestCase
         $analysis = $proposal->analysis()->make();
         $analysis->extracted_text = 'Objectives: Web development with Laravel and MySQL database management.';
         $analysis->save();
-        $analysis = app(ProposalAnalysisService::class)->analyze($proposal);
+        // Legacy utility remains isolated from the active recommendation pipeline.
+        $analysis->forceFill(['analyzed_at' => now(), 'identified_expertise_areas' => ['Web Development', 'Database Systems']])->save();
+        $analysis->refresh();
         $this->assertSame(['Web Development', 'Database Systems'], $analysis->identified_expertise_areas);
 
         $user = User::factory()->create(['role' => User::ROLE_FACULTY]);

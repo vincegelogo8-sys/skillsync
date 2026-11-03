@@ -24,6 +24,14 @@ class FacultyExpertiseRequest extends FormRequest
             return false;
         }
 
+        if ($this->user()->role === User::ROLE_FACULTY) {
+            if ($this->routeIs('faculty.expertise.index')) {
+                return true;
+            }
+
+            return $this->routeIs('faculty.expertise.skills.update') && $this->profile() !== null;
+        }
+
         $profile = $this->profile();
         $expertise = $this->route('expertise');
 
@@ -40,6 +48,13 @@ class FacultyExpertiseRequest extends FormRequest
 
     public function rules(): array
     {
+        if ($this->routeIs('faculty.expertise.skills.update')) {
+            return [
+                'skills' => ['required', 'array', 'min:1', 'max:9'],
+                'skills.*' => ['required', 'string', 'distinct', Rule::in(config('expertise.areas'))],
+            ];
+        }
+
         if (! $this->isMethod('post') && ! $this->isMethod('patch')) {
             return [];
         }
@@ -57,12 +72,17 @@ class FacultyExpertiseRequest extends FormRequest
 
         return [
             'expertise_area' => ['required', 'string', Rule::in(config('expertise.areas')), $unique],
-            'proficiency_score' => ['required', 'integer', 'between:0,100'],
         ];
     }
 
     public function messages(): array
     {
-        return ['expertise_area.unique' => 'This expertise area is already listed. Edit its existing score instead.'];
+        return [
+            'expertise_area.required' => 'Select a faculty skill category.',
+            'expertise_area.in' => 'Select one of the nine supported faculty skill categories.',
+            'expertise_area.unique' => 'This faculty skill is already listed.',
+            'skills.min' => 'Select at least one supported faculty skill category.',
+            'skills.*.in' => 'Select only one of the supported faculty skill categories.',
+        ];
     }
 }

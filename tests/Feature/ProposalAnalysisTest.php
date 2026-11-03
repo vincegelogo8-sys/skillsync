@@ -8,8 +8,15 @@ use App\Models\User;
 use App\Services\DocumentExtractionRunner;
 use App\Services\ProposalAnalysisService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Process\Factory;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Tests\Support\DocumentFixtures;
 use Tests\TestCase;
 
 class ProposalAnalysisTest extends TestCase
@@ -37,57 +44,7 @@ class ProposalAnalysisTest extends TestCase
         return $proposal;
     }
 
-    public function test_technical_rules_use_evidence_without_returning_abstract(): void
-    {
-        $result = app(ProposalAnalysisService::class)->identify('Facial Recognition Attendance', "ABSTRACT\nWe use OpenCV for facial recognition.\nKeywords: attendance\nObjectives\nTo use OpenCV for facial recognition with Python and MySQL.");
-        $this->assertArrayNotHasKey('abstract', $result);
-        $this->assertSame('Computer Vision System', $result['project_type']);
-        $this->assertEqualsCanonicalizing(['Python', 'MySQL', 'OpenCV'], $result['technologies']);
-        $this->assertSame(['Computer Vision', 'Database Systems'], $result['identified_expertise_areas']);
-        $this->assertContains('facial recognition', $result['keywords']);
-        $this->assertNotContains('TensorFlow', $result['technologies']);
-    }
-
-    public function test_aliases_and_punctuation_do_not_create_substring_technologies(): void
-    {
-        $result = app(ProposalAnalysisService::class)->identify('Research Project', 'Objectives: JavaScript, C++, C#, NodeJS, dotnet, React Native, postgres, sklearn and Amazon Web Services.');
-        $this->assertEqualsCanonicalizing(['JavaScript', 'C++', 'C#', 'Node.js', '.NET', 'React Native', 'PostgreSQL', 'scikit-learn', 'AWS'], $result['technologies']);
-        foreach (['Java', 'C', 'React', 'SQL'] as $absent) {
-            $this->assertNotContains($absent, $result['technologies']);
-        }
-        $this->assertCount(3, $result['identified_expertise_areas']);
-        $this->assertSame([], app(ProposalAnalysisService::class)->identify('Research Project', 'Objectives: flasklike reaction mysqldata javabeans')['technologies']);
-    }
-
-    public function test_generic_words_and_unknown_projects_do_not_force_results(): void
-    {
-        $result = app(ProposalAnalysisService::class)->identify('Research Project', 'Objectives: The study study system system research research project development information application.');
-        $this->assertArrayNotHasKey('abstract', $result);
-        $this->assertNull($result['project_type']);
-        $this->assertSame([], $result['keywords']);
-        $this->assertSame([], $result['technologies']);
-        $this->assertSame([], $result['identified_expertise_areas']);
-    }
-
-    public function test_title_has_more_weight_and_repetition_does_not_dominate_rules(): void
-    {
-        $service = app(ProposalAnalysisService::class);
-        $result = $service->identify('Mobile Application', 'Objectives: '.str_repeat('web application ', 100).' Flutter');
-        $this->assertSame('Mobile Application', $result['project_type']);
-        $this->assertSame('Mobile Development', $result['identified_expertise_areas'][0]);
-        $this->assertSame($result, $service->identify('Mobile Application', 'Objectives: '.str_repeat('web application ', 100).' Flutter'));
-        $summary = $service->identify('Research Project', "Executive Summary: This is the actual summary.\nSecond sentence.\n2. Methodology\nNot part of the summary.\nObjectives: To evaluate the system.");
-        $this->assertSame($service->identify('Research Project', 'Objectives: To evaluate the system.'), $summary);
-    }
-
-    public function test_configuration_uses_shared_canonical_categories(): void
-    {
-        $this->assertSame(config('preferences.project_types'), array_keys(config('proposal_analysis.project_types')));
-        $this->assertSame(config('expertise.areas'), array_keys(config('proposal_analysis.expertise')));
-        $this->assertSame([], array_diff(array_keys(config('proposal_analysis.aliases')), config('preferences.technologies')));
-    }
-
-    public function test_owner_analyzes_existing_text_once_and_get_requests_only_read(): void
+    public function test_owner_can_intentionally_reanalyze_and_get_requests_only_read(): void
     {
         $proposal = $this->proposal();
         $url = '/student/proposals/'.$proposal->id;
@@ -100,8 +57,11 @@ class ProposalAnalysisTest extends TestCase
         $this->assertSame('Facial Recognition for Attendance', $proposal->fresh()->title);
         $this->travel(1)->hour();
         $this->post($url.'/analyze')->assertSessionHasNoErrors();
-        $this->get($url)->assertOk()->assertSee('Analysis complete.')->assertSee('Computer Vision System')->assertSee('OpenCV');
-        $this->assertSame($saved, $proposal->fresh()->analysis->toArray());
+        $this->get($url)->assertOk()->assertSee('Proposal Analysis')->assertDontSee('Project Type')->assertSee('Web Development');
+        $this->assertSame($saved['keywords'], $proposal->fresh()->analysis->keywords);
+        $this->assertNotEquals($saved['analyzed_at'], $proposal->fresh()->analysis->analyzed_at->toJSON());
+        Process::assertRanTimes(fn ($process) => true, 2);
+        Http::assertNothingSent();
         $this->assertDatabaseCount('proposal_analyses', 1);
     }
 
@@ -135,9 +95,54 @@ class ProposalAnalysisTest extends TestCase
             throw new RuntimeException('Simulated write failure');
         });
         $this->actingAs($proposal->studentProfile->user)->post('/student/proposals/'.$proposal->id.'/analyze')->assertSessionHasErrors('analysis');
-        $this->assertSame($before, $proposal->fresh()->analysis->toArray());
+        $this->assertSame(Arr::except($before, ['analysis_status', 'analysis_attempt_id', 'updated_at']), Arr::except($proposal->fresh()->analysis->toArray(), ['analysis_status', 'analysis_attempt_id', 'updated_at']));
         Event::forget('eloquent.updating: '.ProposalAnalysis::class);
         $this->post('/student/proposals/'.$proposal->id.'/analyze')->assertSessionHasNoErrors();
+    }
+
+    public function test_malformed_response_preserves_saved_analysis_and_allows_retry(): void
+    {
+        $proposal = $this->proposal();
+        $before = app(ProposalAnalysisService::class)->analyze($proposal)->toArray();
+        $this->fakeProposalAnalysis(['status' => 'completed', 'output' => []]);
+        $url = '/student/proposals/'.$proposal->id;
+        $this->actingAs($proposal->studentProfile->user)->post($url.'/analyze')->assertRedirect($url)->assertSessionHasErrors('analysis');
+        $this->assertSame(Arr::except($before, ['analysis_status', 'analysis_attempt_id', 'updated_at']), Arr::except($proposal->fresh()->analysis->toArray(), ['analysis_status', 'analysis_attempt_id', 'updated_at']));
+        $this->fakeProposalAnalysis();
+        $this->post($url.'/analyze')->assertSessionHasNoErrors();
+    }
+
+    public function test_upload_api_failure_preserves_document_and_extracted_text_for_retry(): void
+    {
+        Storage::fake('proposals');
+        $student = $this->proposal()->studentProfile->user;
+        $this->fakeProposalAnalysis(['error' => 'unavailable'], 503);
+        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('Introduction: Readable proposal text.');
+        $this->actingAs($student)->post('/student/proposals', [
+            'title' => 'Retryable proposal',
+            'document' => UploadedFile::fake()->createWithContent('retry.pdf', DocumentFixtures::pdf()),
+        ])->assertSessionHasErrors('analysis');
+        $proposal = ResearchProposal::latest('id')->first();
+        Storage::disk('proposals')->assertExists($proposal->file_path);
+        $this->assertSame('Introduction: Readable proposal text.', $proposal->analysis->extracted_text);
+        $this->assertNull($proposal->analysis->analyzed_at);
+        $this->fakeProposalAnalysis();
+        $this->post('/student/proposals/'.$proposal->id.'/analyze')->assertSessionHasNoErrors();
+        $this->assertTrue($proposal->fresh()->analysis->hasCurrentAnalysis());
+    }
+
+    public function test_concurrent_analysis_changes_are_not_overwritten(): void
+    {
+        $proposal = $this->proposal();
+        Process::swap(new Factory);
+        Process::fake(function () use ($proposal) {
+            $proposal->analysis->forceFill(['extracted_text' => 'Newer document text.'])->save();
+
+            return Process::result(output: json_encode(['keywords' => ['web development']]));
+        });
+        $this->actingAs($proposal->studentProfile->user)->post('/student/proposals/'.$proposal->id.'/analyze')->assertSessionHasErrors('analysis');
+        $this->assertSame('Newer document text.', $proposal->fresh()->analysis->extracted_text);
+        $this->assertNull($proposal->fresh()->analysis->analyzed_at);
     }
 
     public function test_source_text_is_escaped_in_results(): void
@@ -161,8 +166,8 @@ class ProposalAnalysisTest extends TestCase
 
         foreach (['student' => $proposal->studentProfile->user, 'admin' => User::factory()->create(['role' => User::ROLE_ADMIN])] as $role => $user) {
             $this->actingAs($user)->get('/'.$role.'/proposals/'.$proposal->id)
-                ->assertOk()->assertSee('Research Title')->assertSee('Objectives')->assertSee('Extracted Keywords')
-                ->assertSee('facial recognition')->assertSee('Analyzed')
+                ->assertOk()->assertDontSee('Primary Research Area')->assertDontSee('Technical Concepts')->assertSee('Directly identified skills')
+                ->assertSee('Web Development')->assertSee('Analyzed')
                 ->assertDontSee('Technologies Mentioned')->assertDontSee('Identified Expertise')
                 ->assertDontSee('Abstract / Summary')->assertDontSee('Legacy stored abstract.')
                 ->assertDontSee('No matching terms found.')
@@ -170,7 +175,7 @@ class ProposalAnalysisTest extends TestCase
         }
         $this->assertSame('Legacy stored abstract.', $analysis->fresh()->abstract);
         $this->assertSame($analysis->extracted_text, $analysis->fresh()->extracted_text);
-        $this->assertNotEmpty($analysis->fresh()->technologies);
-        $this->assertNotEmpty($analysis->fresh()->identified_expertise_areas);
+        $this->assertContains('database systems', $analysis->fresh()->technologies);
+        $this->assertContains('Software Engineering', $analysis->fresh()->identified_expertise_areas);
     }
 }

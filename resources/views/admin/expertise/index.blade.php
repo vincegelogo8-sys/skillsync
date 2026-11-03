@@ -1,12 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Expertise') }}</h1>
+        <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Faculty Skills') }}</h1>
     </x-slot>
-    <x-slot name="description">{{ __('Review faculty profiles and manage their research expertise.') }}</x-slot>
+
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                <p class="text-sm text-gray-600">{{ __('Select a faculty member to manage research expertise and proficiency scores.') }}</p>
+                <p class="text-sm text-gray-600">{{ __('Select a faculty member to manage saved faculty skill categories.') }}</p>
                 <div class="mt-4 divide-y divide-gray-200">
                     @forelse ($faculty as $member)
                         <article class="flex flex-wrap items-center justify-between gap-4 py-4">
@@ -17,7 +17,7 @@
                             </div>
                             @if ($member->facultyProfile)
                                 <a href="{{ route('admin.expertise.index', $member->facultyProfile) }}" class="text-sm text-indigo-600 underline"
-                                    aria-label="{{ __('Manage expertise for :name', ['name' => $member->name]) }}">{{ __('Manage expertise') }}</a>
+                                    aria-label="{{ __('Manage faculty skills for :name', ['name' => $member->name]) }}">{{ __('Manage Faculty Skills') }}</a>
                             @else
                                 <p class="text-sm text-amber-800">{{ __('Faculty must complete their basic profile first.') }}</p>
                             @endif

@@ -5,89 +5,26 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\DocumentExtractionRunner;
 use App\Services\DocumentExtractionService;
+use App\Services\LocalNlpService;
 use App\Services\ProposalAnalysisService;
-use App\Services\ProposalSectionExtractor;
+use App\Services\ProposalTextNormalizer;
 use App\Services\RecommendationService;
-use App\Services\SimilarityService;
-use App\Services\TopicAlignmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
-use PhpOffice\PhpWord\IOFactory;
-use PhpOffice\PhpWord\PhpWord;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\DocumentFixtures;
+use Tests\Support\ProposalAnalysisResponse;
 use Tests\TestCase;
 
 class ProposalSectionsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_single_wrapped_title_and_five_page_spanning_objectives(): void
-    {
-        $text = "CONCEPT PAPER\r\nProposed Title:\r\nThe Watchful Campus: A Crowdsourced Framework for Real-Time School\r\nInfrastructure Maintenance\r\nResearcher/s:\r\nExcluded Name\r\nObjectives:\r\n1. To identify and categorize recurring infrastructure issues\r\n2. To design and implement a localized crowdsourcing platform\fPage 2 of 2\nRepublic of the Philippines\n3. To compare the response time and detection rate\n4) To evaluate the level of engagement and willingness\n5. To establish a transparent feedback\nmechanism\nParticipants/Respondents/Informants/Evaluators:\nExcluded Participants";
-        $sections = app(ProposalSectionExtractor::class)->extract($text);
-        $this->assertSame('The Watchful Campus: A Crowdsourced Framework for Real-Time School Infrastructure Maintenance', $sections['title']);
-        $this->assertCount(5, explode("\n", $sections['objectives']));
-        $this->assertStringContainsString('5. To establish a transparent feedback mechanism', $sections['objectives']);
-        $this->assertStringNotContainsString('Excluded', $sections['analysis_text']);
-        $this->assertStringNotContainsString('Republic', $sections['analysis_text']);
-        $this->assertStringNotContainsString('Page', $sections['analysis_text']);
-    }
-
-    public function test_all_title_candidates_are_retained_unless_a_stored_title_is_supplied(): void
-    {
-        $titles = "Title 1: CampusSkill A Web-Based Skill Exchange and Service Request System\nTitle 2: Development of a Web-Based Platform for Skill Sharing\nTitle 3: Design and Implementation of CampusSkill";
-        $text = "proposed\t title\n$titles\nResearchers: Excluded Name\nOBJECTIVES: To develop a platform.";
-        $extractor = app(ProposalSectionExtractor::class);
-        $this->assertSame($titles, $extractor->extract($text)['title']);
-        $this->assertSame('Selected CampusSkill Title', $extractor->extract($text, 'Selected CampusSkill Title')['title']);
-    }
-
-    public function test_repeated_headers_and_wrapped_headings_preserve_campus_objectives(): void
-    {
-        $text = "ISAT U Miagao Campus\nCollege of Computing\nProposed\nTitle:\nThe Watchful Campus\nResearcher: Excluded\nObjectives:\n1. To provide services for the campus\nand its community.\fISAT U Miagao Campus\nCollege of Computing\n2. To improve coordination.\nParticipants/Respondents/\nInformants/Evaluators:\nExcluded Participants";
-        $sections = app(ProposalSectionExtractor::class)->extract($text);
-        $this->assertSame('The Watchful Campus', $sections['title']);
-        $this->assertSame("1. To provide services for the campus and its community.\n2. To improve coordination.", $sections['objectives']);
-    }
-
-    public static function stopHeadings(): array
-    {
-        return array_map(fn ($heading) => [$heading], [
-            'Participants:', 'Participants/Respondents/Informants/Evaluators:',
-            'Methodology/Research Design:', 'Expected Output/s', 'Expected Outputs:',
-            'Significance:', 'Scope:', 'Scope and Limitations:', 'Research Design:',
-            'Name and Signature of the Student Researchers', 'Priority Agenda:',
-        ]);
-    }
-
-    #[DataProvider('stopHeadings')]
-    public function test_objectives_stop_at_recognized_sections(string $heading): void
-    {
-        $sections = app(ProposalSectionExtractor::class)->extract("Objectives\n1. To develop a web-based system.\n2. To evaluate the system.\n$heading\nStudents Faculty Administrators Python Python", 'CampusSkill');
-        $this->assertSame("1. To develop a web-based system.\n2. To evaluate the system.", $sections['objectives']);
-    }
-
-    public function test_pdf_and_docx_formatting_produce_identical_analysis_and_similarity(): void
-    {
-        $pdf = "PROPOSED TITLE:\r\nCampusSkill: A Web\u{2011}Based Skill Exchange\r\nSystem\r\nResearcher: Excluded\r\nObjectives:\r\n1. To implement recommen-\r\ndation logic using Laravel and MySQL.\f[PAGE BREAK]\nPage 2\n2) To provide a real-\ntime dashboard.\nMethodology: Python OpenCV";
-        $docx = "Proposed Title\nCampusSkill: A Web-Based Skill Exchange System\nResearchers: Excluded\nObjectives\n1. To implement recommendation\u{00A0}logic using Laravel and MySQL.\n\n2) To provide a real-time dashboard.\nMethodology: Python OpenCV";
-        $extractor = app(ProposalSectionExtractor::class);
-        $this->assertSame($extractor->extract($docx), $extractor->extract($pdf));
-        $analyzer = app(ProposalAnalysisService::class);
-        $this->assertSame($analyzer->identify('', $docx), $analyzer->identify('', $pdf));
-        $similarity = app(SimilarityService::class);
-        $this->assertSame(
-            $similarity->calculate($extractor->extract($docx)['analysis_text'], ['web' => 'Web Development']),
-            $similarity->calculate($extractor->extract($pdf)['analysis_text'], ['web' => 'Web Development'])
-        );
-        $this->assertSame('recommendation', $extractor->normalize("recommen\u{00AD}\n dation"));
-    }
-
     private function proposal(string $text)
     {
-        $student = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        $student = User::factory()->create(['role' => 'student']);
         $profile = $student->studentProfile()->create(['student_number' => 'SEC-'.$student->id, 'course' => 'BSIT', 'year_level' => 3, 'section' => 'B']);
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Web Development', 'file_path' => 'sections.pdf', 'original_filename' => 'sections.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
@@ -98,105 +35,124 @@ class ProposalSectionsTest extends TestCase
         return $proposal;
     }
 
-    public function test_real_pdf_and_docx_use_the_same_sections_and_detections(): void
+    public function test_pdf_docx_formatting_and_page_furniture_normalize_equivalently(): void
+    {
+        $pdf = "EXAMPLE UNIVERSITY\nIntroduction\nCrowdsourced recommen-\ndation\u{00A0}reports.\fPage 2 of 4\nEXAMPLE UNIVERSITY\nMethodology\n1. Real-\ntime issue monitoring.";
+        $docx = "Introduction\nCrowdsourced recommendation reports.\nMethodology\n1. Real-time issue monitoring.";
+        $normalizer = app(ProposalTextNormalizer::class);
+        $this->assertSame($normalizer->relevant($docx), $normalizer->relevant($pdf));
+        $this->assertSame('recommendation', $normalizer->normalize("recommen\u{00AD}\n dation"));
+    }
+
+    public function test_nonresearch_sections_are_excluded_and_relevant_sections_remain(): void
+    {
+        $text = "Approval Sheet\nPanel Person\nTable of Contents\nReferences .... 30\nIntroduction .... 1\nIntroduction\nOur campus maintenance proposal.\nReview of Related Literature\nA cited study used image classification.\nMethodology\nWe use crowdsourced issue reporting.\nBibliography\nOtherAuthor unrelated deep learning.";
+        $clean = app(ProposalTextNormalizer::class)->relevant($text);
+        $this->assertStringNotContainsString('panel person', $clean);
+        $this->assertStringNotContainsString('otherauthor', $clean);
+        $this->assertStringContainsString('our campus maintenance', $clean);
+        $this->assertStringContainsString('a cited study', $clean);
+        $this->assertStringContainsString('we use crowdsourced', $clean);
+    }
+
+    public function test_real_pdf_and_docx_extractors_feed_equivalent_text_to_local_nlp(): void
     {
         Storage::fake('proposals');
-        $lines = ['Proposed Title:', 'CampusSkill Web-Based Skill Exchange', 'Researcher/s:', 'Excluded Name',
-            'Objectives:', '1. To develop a web application using Laravel.', '2. To provide a real-time dashboard.',
-            'Methodology:', 'Python OpenCV facial recognition'];
+        $lines = ['Introduction', 'A web application using Laravel PHP MySQL.', 'Objectives:', 'To manage student records.', 'Methodology:', 'Web development and database systems.'];
         Storage::disk('proposals')->put('equivalent.pdf', DocumentFixtures::pdf($lines));
-        $word = new PhpWord;
-        $section = $word->addSection();
-        foreach ($lines as $line) {
-            $section->addText($line);
-        }
-        IOFactory::createWriter($word, 'Word2007')->save(Storage::disk('proposals')->path('equivalent.docx'));
+        Storage::disk('proposals')->put('equivalent.docx', DocumentFixtures::docxParagraphs($lines));
         $reader = app(DocumentExtractionService::class);
         $pdf = $reader->extract(Storage::disk('proposals')->path('equivalent.pdf'), 'pdf');
         $docx = $reader->extract(Storage::disk('proposals')->path('equivalent.docx'), 'docx');
-        $extractor = app(ProposalSectionExtractor::class);
-        $this->assertSame($extractor->extract($pdf), $extractor->extract($docx));
-        $this->assertSame(app(ProposalAnalysisService::class)->identify('', $pdf), app(ProposalAnalysisService::class)->identify('', $docx));
+        $this->assertSame(app(ProposalTextNormalizer::class)->relevant($pdf), app(ProposalTextNormalizer::class)->relevant($docx));
+        app(ProposalAnalysisService::class)->identify('Records', $pdf);
+        app(ProposalAnalysisService::class)->identify('Records', $docx);
+        Process::assertRanTimes(fn ($process) => json_decode($process->input, true)['title'] === 'Records', 2);
+        Http::assertNothingSent();
     }
 
-    public function test_excluded_sections_cannot_change_detection_vectors_alignment_or_recommendations(): void
+    public function test_missing_objectives_does_not_block_whole_proposal_analysis(): void
     {
-        $clean = "Proposed Title: Web Development\nObjectives:\nTo develop a web application using Laravel.\n";
-        $dirty = "University of Excluded\n".$clean."Participants: Python Python\nSignificance: OpenCV facial recognition\nMethodology: machine learning TensorFlow\nExpected Outputs: GIS geographic information system";
-        $analyzer = app(ProposalAnalysisService::class);
-        $this->assertSame($analyzer->identify('', $clean), $analyzer->identify('', $dirty));
-        $proposal = $this->proposal($dirty);
-        $analysis = $analyzer->analyze($proposal);
-        $faculty = User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
-        $faculty->expertise()->create(['expertise_area' => 'Web Development', 'proficiency_score' => 80]);
-        $similarity = app(SimilarityService::class);
-        $expected = $similarity->calculate("Web Development\nTo develop a web application using Laravel.", [$faculty->id => 'Web Development']);
-        $this->assertSame($expected, $similarity->forProposal($analysis, [$faculty]));
-        $alignment = app(TopicAlignmentService::class)->forProposal($analysis, [$faculty]);
-        $this->assertSame($expected['scores'][$faculty->id], $alignment[$faculty->id]['cosine_similarity_score']);
-        $this->assertSame(['Laravel'], $analysis->technologies);
-        $this->assertSame(['Web Development'], $analysis->identified_expertise_areas);
-        // Simulate legacy whole-document detections, then generate fresh recommendations.
-        $analysis->technologies = ['Python'];
-        $analysis->identified_expertise_areas = ['Computer Vision'];
-        $analysis->save();
-        $result = app(RecommendationService::class)->generate($proposal, $proposal->studentProfile->user)->sole();
-        $this->assertEquals($alignment[$faculty->id], $result->details['topic_alignment']);
-        $this->assertSame(['Laravel'], $analysis->fresh()->technologies);
-        $this->assertSame($dirty, $analysis->fresh()->extracted_text);
+        $proposal = $this->proposal('Introduction: The study manages records. Methodology: A web application with Laravel.');
+        $this->actingAs($proposal->studentProfile->user)->post('/student/proposals/'.$proposal->id.'/analyze')->assertSessionHasNoErrors();
+        $this->assertTrue($proposal->fresh()->analysis->hasCurrentAnalysis());
     }
 
-    public function test_missing_objectives_reports_a_validation_error_without_analyzing(): void
+    public function test_legacy_analysis_requires_explicit_reanalysis_and_get_does_not_run_nlp(): void
     {
-        $proposal = $this->proposal("Proposed Title: CampusSkill\nMethodology: Python Python");
-        $this->actingAs($proposal->studentProfile->user)->from('/student/proposals/'.$proposal->id)
-            ->post('/student/proposals/'.$proposal->id.'/analyze')
-            ->assertSessionHasErrors(['analysis' => 'Objectives section could not be identified in the uploaded proposal.']);
-        $this->assertNull($proposal->analysis->analyzed_at);
-        $this->assertNull($proposal->analysis->keywords);
+        $proposal = $this->proposal('Methodology: A web application.');
+        $proposal->analysis->forceFill(['analyzed_at' => now(), 'keywords' => ['old keyword']])->save();
+        $this->actingAs($proposal->studentProfile->user)->get('/student/proposals/'.$proposal->id)->assertOk()->assertSee('Reanalyze this proposal');
+        $this->post('/student/proposals/'.$proposal->id.'/recommendations')->assertSessionHasErrors('recommendations');
+        Http::assertNothingSent();
     }
 
-    public function test_missing_title_without_a_trusted_stored_title_is_rejected(): void
-    {
-        $this->expectException(ValidationException::class);
-        app(ProposalSectionExtractor::class)->extract('Objectives: To develop a platform.');
-    }
-
-    public function test_legacy_analysis_missing_objectives_shows_error_on_recommendation_page(): void
-    {
-        $proposal = $this->proposal('Methodology: Python');
-        $analysis = $proposal->analysis;
-        $analysis->analyzed_at = now();
-        $analysis->save();
-        $url = '/student/proposals/'.$proposal->id.'/recommendations';
-        $this->actingAs($proposal->studentProfile->user)->post($url)->assertSessionHasErrors('analysis');
-        $this->get($url)->assertSee('Objectives section could not be identified in the uploaded proposal.');
-    }
-
-    public function test_refresh_reanalyzes_and_updates_existing_recommendation_ids(): void
+    public function test_refresh_replaces_supported_categories_and_recalculates_matching_recommendations(): void
     {
         Storage::fake('proposals');
-        $proposal = $this->proposal('Objectives: To develop using Python and OpenCV facial recognition.');
+        $proposal = $this->proposal('Introduction: Web records.');
         Storage::disk('proposals')->put($proposal->file_path, 'placeholder');
         app(ProposalAnalysisService::class)->analyze($proposal);
-        User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty = User::factory()->create(['role' => 'faculty'])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty->expertise()->create(['expertise_area' => 'Database Systems']);
         $old = app(RecommendationService::class)->generate($proposal, $proposal->studentProfile->user)->sole();
-        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()
-            ->andReturn("Objectives: To develop a web application using Laravel.\nMethodology: Python OpenCV");
+        $this->fakeProposalAnalysis(ProposalAnalysisResponse::response(['primary_research_area' => 'Mobile Development', 'research_concepts' => ['mobile development', 'database systems'], 'technical_concepts' => ['MySQL']]));
+        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('Methodology: Android mobile application stores attendance records in MySQL.');
+        $this->travel(1)->hour();
         $this->actingAs($proposal->studentProfile->user)->post('/student/proposals/'.$proposal->id.'/refresh-extraction')->assertSessionHasNoErrors();
-        $this->assertSame(['Laravel'], $proposal->fresh()->analysis->technologies);
-        $this->assertSame($old->id, $proposal->recommendations()->sole()->id);
-        $this->assertSame(['Web Development'], $proposal->fresh()->analysis->identified_expertise_areas);
+        $analysis = $proposal->fresh()->analysis;
+        $updated = $proposal->recommendations()->sole();
+        $this->assertSame(['Web Development', 'Mobile Development', 'Database Systems'], $analysis->keywords);
+        $this->assertSame(['mobile development', 'database systems'], $analysis->technologies);
+        $this->assertSame($old->id, $updated->id);
+        $this->assertSame('Database Systems', $updated->details['matching_expertise'][0]['category']);
+        $this->assertNull($updated->topic_alignment_score);
+        $this->assertNull($updated->final_score);
+        Process::assertRanTimes(fn ($process) => true, 1);
+        Http::assertNothingSent();
+        Storage::disk('proposals')->assertExists($proposal->file_path);
     }
 
-    public function test_refresh_missing_objectives_preserves_previous_results_and_reports_error(): void
+    public function test_failed_refresh_preserves_extraction_analysis_and_recommendations(): void
     {
         Storage::fake('proposals');
-        $proposal = $this->proposal('Objectives: To develop a web application using Laravel.');
+        $proposal = $this->proposal('Introduction: Web records.');
         Storage::disk('proposals')->put($proposal->file_path, 'placeholder');
         $before = app(ProposalAnalysisService::class)->analyze($proposal)->toArray();
-        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('Methodology: Python');
-        $this->actingAs($proposal->studentProfile->user)->post('/student/proposals/'.$proposal->id.'/refresh-extraction')->assertSessionHasErrors('analysis');
-        $this->assertSame($before, $proposal->fresh()->analysis->toArray());
+        $faculty = User::factory()->create(['role' => 'faculty'])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty->expertise()->create(['expertise_area' => 'Web Development']);
+        $rows = app(RecommendationService::class)->generate($proposal, $proposal->studentProfile->user)
+            ->map(fn ($recommendation) => $recommendation->getAttributes())->all();
+        $this->fakeProposalAnalysis(['error' => 'secret-provider-details'], 503);
+        $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn('New document text.');
+        $url = '/student/proposals/'.$proposal->id;
+        $this->actingAs($proposal->studentProfile->user)->post($url.'/refresh-extraction')->assertRedirect($url)->assertSessionHasErrors('analysis');
+        $this->assertSame(Arr::except($before, ['analysis_status', 'analysis_attempt_id', 'updated_at', 'extracted_text']), Arr::except($proposal->fresh()->analysis->toArray(), ['analysis_status', 'analysis_attempt_id', 'updated_at', 'extracted_text']));
+        $this->assertSame('New document text.', $proposal->fresh()->analysis->extracted_text);
+        $this->assertSame('failed', $proposal->fresh()->analysis->analysis_status);
+        $this->assertSame('extracted', $proposal->fresh()->status);
+        $this->assertSame($rows, $proposal->recommendations()->get()->map(fn ($recommendation) => $recommendation->getAttributes())->all());
+        $this->get($url)->assertOk()->assertSee(LocalNlpService::UNAVAILABLE)->assertDontSee('secret-provider-details');
+        Storage::disk('proposals')->assertExists($proposal->file_path);
+        $this->fakeProposalAnalysis();
+        $this->post($url.'/analyze')->assertSessionHasNoErrors();
+        $this->assertSame('New document text.', $proposal->fresh()->analysis->extracted_text);
+        $this->assertSame('completed', $proposal->fresh()->analysis->analysis_status);
+        Process::assertRan(fn ($process) => json_decode($process->input, true)['text'] === 'web development new document text.');
+    }
+
+    public function test_recommendation_save_failure_rolls_back_new_analysis(): void
+    {
+        $proposal = $this->proposal('Introduction: Records management.');
+        $before = app(ProposalAnalysisService::class)->analyze($proposal)->toArray();
+        $faculty = User::factory()->create(['role' => 'faculty'])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty->expertise()->create(['expertise_area' => 'Database Systems']);
+        $rows = app(RecommendationService::class)->generate($proposal, $proposal->studentProfile->user)
+            ->map(fn ($recommendation) => $recommendation->getAttributes())->all();
+        $this->mock(RecommendationService::class)->shouldReceive('generate')->once()->andThrow(new \RuntimeException('Private database details'));
+        $this->travel(1)->hour();
+        $this->actingAs($proposal->studentProfile->user)->post('/student/proposals/'.$proposal->id.'/analyze')->assertSessionHasErrors('analysis');
+        $this->assertSame(Arr::except($before, ['analysis_status', 'analysis_attempt_id', 'updated_at']), Arr::except($proposal->fresh()->analysis->toArray(), ['analysis_status', 'analysis_attempt_id', 'updated_at']));
+        $this->assertSame($rows, $proposal->recommendations()->get()->map(fn ($recommendation) => $recommendation->getAttributes())->all());
     }
 }

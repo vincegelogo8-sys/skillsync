@@ -81,14 +81,20 @@ class ProposalExtractionService
      * The document is extracted again using the latest
      * DocumentExtractionService rules.
      *
-     * The previous analysis is replaced only when the
-     * new extraction succeeds.
-     *
-     * The controller recalculates existing recommendations in the same transaction.
+     * Successful text extraction persists even when local NLP fails.
+     * Concepts and recommendations are replaced together only after validated analysis.
      */
     public function refresh(
         ResearchProposal $proposal
     ): ResearchProposal {
+        if (! $proposal->analysis()->exists()) {
+            $extracted = $this->extract($proposal);
+            if ($extracted->analysis) {
+                app(ProposalAnalysisService::class)->analyze($extracted);
+            }
+
+            return $proposal->fresh()->load('analysis');
+        }
         /*
          * First try extracting the document WITHOUT deleting
          * the previous analysis.
@@ -127,48 +133,9 @@ class ProposalExtractionService
             ]);
         }
 
-        /*
-         * The new extraction succeeded.
-         *
-         * We can now safely replace the previous analysis.
-         */
-        try {
-            return DB::transaction(function () use ($proposal, $text) {
-                $proposal = ResearchProposal::whereKey($proposal->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+        // Persist successful extraction independently; only validated local concepts update RTA text.
+        app(ProposalAnalysisService::class)->analyze($proposal, $text);
 
-                $analysis = $proposal->analysis()->first() ?? $proposal->analysis()->make();
-
-                foreach (['keywords', 'project_type', 'technologies', 'identified_expertise_areas'] as $field) {
-                    $analysis->{$field} = null;
-                }
-
-                $analysis->extracted_text = $text;
-
-                /*
-                 * All analysis fields are intentionally left blank.
-                 * ProposalAnalysisService will recalculate them.
-                 */
-                $analysis->analyzed_at = null;
-
-                $analysis->save();
-
-                $proposal->status = 'extracted';
-
-                $proposal->extraction_error = null;
-
-                $proposal->save();
-
-                return $proposal->fresh()->load('analysis');
-            });
-        } catch (Throwable $exception) {
-            report($exception);
-
-            throw ValidationException::withMessages([
-                'extraction' => 'The refreshed extraction could not be saved. '
-                    .'Please try again.',
-            ]);
-        }
+        return $proposal->fresh()->load('analysis');
     }
 }

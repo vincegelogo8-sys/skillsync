@@ -1,11 +1,11 @@
 <x-app-layout>
     <x-slot name="header"><h1 class="font-semibold text-xl text-gray-800">{{ __('Upload Research Proposal') }}</h1></x-slot>
-    <x-slot name="description">{{ __('Submit your research title and a proposal document to begin analysis.') }}</x-slot>
+
     <div class="py-12"><div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
             <form method="POST" action="{{ route('student.proposals.store') }}" enctype="multipart/form-data" class="max-w-2xl space-y-6">
                 @csrf
-                <p class="text-sm text-gray-600">{{ __('Enter your research title and upload a PDF or DOCX document, up to 10 MB. Your document is accessible to you and Admin.') }}</p>
+                <p class="text-sm text-gray-600">{{ __('Your proposal is analyzed locally to identify research concepts. Your document is accessible to you and Admin.') }}</p>
                 @php $title = old('title'); @endphp
                 <div>
                     <x-input-label for="title" :value="__('Research Title')" />

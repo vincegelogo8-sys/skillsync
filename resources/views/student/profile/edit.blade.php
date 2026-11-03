@@ -2,19 +2,16 @@
     <x-slot name="header">
         <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Student Profile') }}</h1>
     </x-slot>
-    <x-slot name="description">{{ __('Keep your academic details current for your research proposal and adviser requests.') }}</x-slot>
+
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <section class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     <h3 class="text-lg font-medium text-gray-900">{{ __('Academic information') }}</h3>
-                    <p class="mt-1 text-sm text-gray-600">
-                        {{ __('Enter your current student details. All fields are required.') }}
-                    </p>
                     <p class="mt-4 text-sm text-gray-700 break-words">{{ $user->name }} &middot; {{ $user->email }}</p>
                     <a href="{{ route('profile.edit') }}" class="text-sm text-indigo-600 underline">
-                        {{ __('Edit your name, email, or password in Account Settings') }}
+                        {{ __('Account Settings') }}
                     </a>
 
                     @if (session('status') === 'student-profile-updated')

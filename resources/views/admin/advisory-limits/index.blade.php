@@ -1,8 +1,8 @@
 <x-app-layout>
     <x-slot name="header"><h1 class="text-xl font-semibold text-gray-800">{{ __('Advisory Limits') }}</h1></x-slot>
-    <x-slot name="description">{{ __('Review active advisory loads and manage faculty capacity.') }}</x-slot>
+
     <div class="py-12"><section class="mx-auto max-w-7xl bg-white p-6 shadow sm:rounded-lg">
-        <p class="text-sm text-gray-600">{{ __('Manage faculty capacity. Advisory load counts active assignments; limits do not affect recommendation scores.') }}</p>
+        <p class="text-sm text-gray-600">{{ __('Limits control adviser availability and do not change Research Topic Alignment.') }}</p>
         <div class="mt-5 divide-y divide-gray-200">
             @forelse ($faculties as $faculty)
                 @php($capacity = $capacities[$faculty->id])

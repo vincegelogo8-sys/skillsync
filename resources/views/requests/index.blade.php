@@ -1,14 +1,15 @@
 <x-app-layout>
     <x-slot name="header"><h1 class="text-xl font-semibold text-gray-800">{{ __('Adviser Requests') }}</h1></x-slot>
-    <x-slot name="description">{{ __('Follow adviser requests, faculty decisions, and their current status.') }}</x-slot>
+
     <div class="py-12"><section class="mx-auto max-w-7xl bg-white p-6 shadow sm:rounded-lg">
-        <p class="text-sm text-gray-600">{{ __('Track adviser requests and their status. A pending request does not reserve capacity or assign an adviser.') }}</p>
-        @if (session('status') === 'request-submitted')<p role="status" class="ui-alert mt-4 text-sm text-green-700">{{ __('Adviser request submitted successfully.') }}</p>@endif
+        <p class="text-sm text-gray-600">{{ __('Pending requests do not reserve an adviser.') }}</p>
+        @if (session('status') === 'request-submitted')<p role="status" class="ui-alert mt-4 text-sm text-green-700">{{ __('Adviser request sent.') }}</p>@endif
         @if (session('status') === 'request-cancelled')<p role="status" class="ui-alert mt-4 text-sm text-green-700">{{ __('Adviser request cancelled.') }}</p>@endif
-        @if (session('status') === 'request-declined')<p role="status" class="ui-alert mt-4 text-sm text-green-700">{{ __('Adviser request declined.') }}</p>@endif
+        @if (session('status') === 'request-deleted')<p role="status" class="ui-alert mt-4 text-sm text-green-700">{{ __('Cancelled adviser request removed from your list. Its history has been retained.') }}</p>@endif
+        @if (session('status') === 'request-declined')<p role="status" class="ui-alert mt-4 text-sm text-green-700">{{ __('Request declined.') }}</p>@endif
         <div role="alert"><x-input-error :messages="$errors->get('adviser_request')" class="mt-4" /></div>
         <div role="alert"><x-input-error :messages="$errors->get('assignment')" class="mt-4" /></div>
-        @if ($role === 'faculty')<p class="mt-3 text-sm text-gray-600">{{ __('Accept Request creates the final active assignment and cancels other pending requests for that proposal. Capacity is checked again when you accept.') }}</p>@endif
+        @if ($role === 'faculty')<p class="mt-3 text-sm text-gray-600">{{ __('Accepting assigns you as adviser and closes other pending requests for this proposal.') }}</p>@endif
         <div class="mt-5 divide-y divide-gray-200">
             @forelse ($requests as $adviserRequest)
                 <article class="py-5">
@@ -20,15 +21,23 @@
                     @if ($role !== 'student')<p class="mt-2 text-sm text-gray-700">{{ __('Student') }}: {{ $adviserRequest->studentProfile->user->name }} · {{ $adviserRequest->studentProfile->student_number }}</p>@endif
                     <p class="mt-2 text-xs text-gray-600">{{ __('Requested') }} {{ $adviserRequest->requested_at->format('Y-m-d H:i T') }} @if ($adviserRequest->responded_at) · {{ __('Updated') }} {{ $adviserRequest->responded_at->format('Y-m-d H:i T') }} @endif</p>
                     <div class="mt-4 flex flex-wrap items-center gap-4">
-                        @if ($role !== 'faculty')<a href="{{ route($role.'.recommendations.index', $adviserRequest->researchProposal) }}" class="text-sm text-indigo-600 underline">{{ __('View recommendations') }}</a>@endif
+                        @if ($role === 'faculty')<a href="{{ route('adviser-requests.proposal', $adviserRequest) }}" target="_blank" rel="noopener" class="button button-secondary inline-flex items-center">{{ __('View Proposal') }}</a>@endif
+                        @if ($role === 'student')<a href="{{ route('student.recommendations.index', $adviserRequest->researchProposal) }}" class="text-sm text-indigo-600 underline">{{ __('View recommendations') }}</a>@endif
+                        @if ($role === 'admin')<a href="{{ route('admin.proposals.show', $adviserRequest->researchProposal) }}" class="text-sm text-indigo-600 underline">{{ __('View proposal') }}</a>@endif
+                        @if ($role === 'student' && $adviserRequest->status === 'cancelled')
+                            <form method="POST" action="{{ route('student.requests.destroy', $adviserRequest) }}" onsubmit="return confirm('Remove this cancelled adviser request from your list? Its history will be retained.');">
+                                @csrf @method('DELETE')
+                                <x-danger-button>{{ __('Delete Request') }}</x-danger-button>
+                            </form>
+                        @endif
                         @if ($adviserRequest->status === 'pending' && $role !== 'admin')
                             @if ($role === 'faculty')
-                                <form method="POST" action="{{ route('faculty.requests.approve', $adviserRequest) }}">
+                                <form method="POST" action="{{ route('faculty.requests.approve', $adviserRequest) }}" onsubmit="return confirm('Accept this request and become the assigned adviser?');">
                                     @csrf
                                     <x-primary-button class="button-success">{{ __('Accept Request') }}</x-primary-button>
                                 </form>
                             @endif
-                            <form method="POST" action="{{ route($role.'.requests.'.($role === 'student' ? 'cancel' : 'decline'), $adviserRequest) }}">
+                            <form method="POST" action="{{ route($role.'.requests.'.($role === 'student' ? 'cancel' : 'decline'), $adviserRequest) }}" onsubmit="return confirm('Close this adviser request?');">
                                 @csrf @method('PATCH')
                                 <x-danger-button>{{ $role === 'student' ? __('Cancel Request') : __('Decline Request') }}</x-danger-button>
                             </form>
@@ -36,8 +45,8 @@
                     </div>
                 </article>
             @empty
-                <x-empty-state title="{{ __('No adviser requests yet.') }}" />
-                @if ($role === 'student')<a href="{{ route('student.proposals.index') }}" class="text-sm text-indigo-600 underline">{{ __('Open your proposals to view recommendations and request an adviser.') }}</a>@endif
+                <x-empty-state title="{{ __('No adviser requests.') }}" />
+                @if ($role === 'student')<a href="{{ route('student.proposals.index') }}" class="text-sm text-indigo-600 underline">{{ __('View proposals') }}</a>@endif
             @endforelse
         </div>
         <div class="mt-5">{{ $requests->links() }}</div>

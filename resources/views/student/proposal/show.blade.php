@@ -4,7 +4,7 @@
             {{ __('Research Proposal') }}
         </h1>
     </x-slot>
-    <x-slot name="description">{{ __('Review your proposal, its analysis, and the next steps for adviser matching.') }}</x-slot>
+
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -18,13 +18,16 @@
                     {{ __('Back to proposals') }}
                 </a>
 
+                @if (session('status') === 'proposal-analyzed')
+                    <x-alert type="success" class="mt-4">{{ __('Proposal analysis completed.') }}</x-alert>
+                @endif
                 {{-- SUCCESS MESSAGES --}}
                 @if (session('status') === 'proposal-uploaded')
                     <div
                         role="status"
                         class="ui-alert mt-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
                     >
-                        {{ __('Research proposal uploaded successfully.') }}
+                        {{ __('Proposal uploaded successfully.') }}
                     </div>
                 @endif
 
@@ -33,7 +36,7 @@
                         role="status"
                         class="ui-alert mt-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700"
                     >
-                        {{ __('Document extraction and proposal analysis were refreshed successfully.') }}
+                        {{ __('Proposal analysis refreshed.') }}
                     </div>
                 @endif
 
@@ -144,66 +147,6 @@
 
                 </dl>
 
-                {{-- DOCUMENT ACTIONS --}}
-                <div class="mt-6 flex flex-wrap items-center gap-3">
-
-                    <a
-                        href="{{ route(($admin ? 'admin' : 'student').'.proposals.download', $proposal) }}"
-                        class="button button-secondary"
-                    >
-                        {{ __('Download Document') }}
-                    </a>
-
-                    {{-- REFRESH EXTRACTION --}}
-                    <form
-                        method="POST"
-                        action="{{ route(($admin ? 'admin' : 'student').'.proposals.refresh-extraction', $proposal) }}"
-                        onsubmit="return confirm('Refresh the document extraction? The uploaded PDF/DOCX will be kept, but the extracted text, proposal analysis, and generated recommendation scores will be recalculated.');"
-                    >
-                        @csrf
-
-                        <button
-                            type="submit"
-                            class="button button-secondary"
-                        >
-                            {{ __('Refresh Extraction') }}
-                        </button>
-                    </form>
-
-                    {{-- DELETE - STUDENT ONLY --}}
-                    @unless ($admin)
-
-                        @if (! $proposal->assignment)
-                            <form
-                                method="POST"
-                                action="{{ route('student.proposals.destroy', $proposal) }}"
-                                onsubmit="return confirm('Are you sure you want to permanently delete this proposal? The uploaded document, analysis, recommendations, and related adviser requests will also be deleted. This action cannot be undone.');"
-                            >
-                                @csrf
-                                @method('DELETE')
-
-                                <button
-                                    type="submit"
-                                    class="button button-danger"
-                                >
-                                    {{ __('Delete Proposal') }}
-                                </button>
-                            </form>
-                        @else
-                            <button
-                                type="button"
-                                disabled
-                                title="A proposal with an adviser assignment cannot be deleted."
-                                class="button"
-                            >
-                                {{ __('Delete Proposal') }}
-                            </button>
-                        @endif
-
-                    @endunless
-
-                </div>
-
                 {{-- EXTRACTION ERROR --}}
                 @if ($proposal->extraction_error)
                     <div
@@ -221,12 +164,14 @@
                 @endif
 
                 {{-- RECOMMENDATIONS --}}
+                @if (auth()->user()->role === \App\Models\User::ROLE_STUDENT)
                 <a
-                    href="{{ route(($admin ? 'admin' : 'student').'.recommendations.index', $proposal) }}"
+                    href="{{ route('student.recommendations.index', $proposal) }}"
                     class="button button-primary mt-6"
                 >
                     {{ __('View Adviser Recommendations') }}
                 </a>
+                @endif
 
                 {{-- ANALYSIS --}}
                 @if ($proposal->analysis)
@@ -246,10 +191,6 @@
                                 <h4 class="text-lg font-medium text-gray-900">
                                     {{ __('Extracted Document Text') }}
                                 </h4>
-
-                                <p class="mt-1 text-sm text-gray-600">
-                                    {{ __('Text is saved from your document. Check that the content is readable.') }}
-                                </p>
                             </div>
 
                         </div>
@@ -289,6 +230,66 @@
                     @endunless
 
                 @endif
+
+                <h2 class="mt-8 text-lg font-semibold text-gray-900">{{ __('Actions') }}</h2>
+                <div class="mt-6 flex flex-wrap items-center gap-3">
+
+                    <a
+                        href="{{ route(($admin ? 'admin' : 'student').'.proposals.download', $proposal) }}"
+                        class="button button-secondary"
+                    >
+                        {{ __('Download Document') }}
+                    </a>
+
+                    {{-- REFRESH EXTRACTION --}}
+                    <form
+                        method="POST"
+                        action="{{ route(($admin ? 'admin' : 'student').'.proposals.refresh-extraction', $proposal) }}"
+                        onsubmit="return confirm('Re-extract and reanalyze this proposal? Existing recommendations will be updated.');"
+                    >
+                        @csrf
+
+                        <button
+                            type="submit"
+                            class="button button-secondary"
+                        >
+                            {{ __('Refresh / Reanalyze') }}
+                        </button>
+                    </form>
+
+                    {{-- DELETE - STUDENT ONLY --}}
+                    @unless ($admin)
+
+                        @if (! $proposal->assignment)
+                            <form
+                                method="POST"
+                                action="{{ route('student.proposals.destroy', $proposal) }}"
+                                onsubmit="return confirm('Are you sure you want to permanently delete this proposal? The uploaded document, analysis, recommendations, and related adviser requests will also be deleted. This action cannot be undone.');"
+                            >
+                                @csrf
+                                @method('DELETE')
+
+                                <button
+                                    type="submit"
+                                    class="button button-danger"
+                                >
+                                    {{ __('Delete Proposal') }}
+                                </button>
+                            </form>
+                        @else
+                            <button
+                                type="button"
+                                disabled
+                                title="A proposal with an adviser assignment cannot be deleted."
+                                class="button"
+                            >
+                                {{ __('Delete Proposal') }}
+                            </button>
+                        @endif
+
+                    @endunless
+
+                </div>
 
             </section>
 

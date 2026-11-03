@@ -7,6 +7,23 @@ use PhpOffice\PhpWord\PhpWord;
 
 class DocumentFixtures
 {
+    public static function docxParagraphs(array $lines): string
+    {
+        $word = new PhpWord;
+        $section = $word->addSection();
+        foreach ($lines as $line) {
+            $section->addText($line);
+        }
+        $path = tempnam(sys_get_temp_dir(), 'skillsync-docx-');
+        try {
+            IOFactory::createWriter($word, 'Word2007')->save($path);
+
+            return file_get_contents($path);
+        } finally {
+            unlink($path);
+        }
+    }
+
     public static function pdf(array $lines = ['Objectives:', 'Research proposal using Laravel and MySQL', 'C++ C# .NET Node.js API SQL']): string
     {
         $stream = "BT /F1 12 Tf 14 TL 50 750 Td\n";

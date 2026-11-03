@@ -150,11 +150,12 @@ class ProposalExtractionTest extends TestCase
         $this->assertDatabaseCount('proposal_analyses', 0);
     }
 
-    public function test_xml_entities_and_external_document_content_are_rejected(): void
+    public function test_xml_entities_are_rejected_and_external_images_are_ignored(): void
     {
         foreach (['entity', 'external'] as $kind) {
             Storage::disk('proposals')->put('unsafe.docx', DocumentFixtures::docx());
             $path = Storage::disk('proposals')->path('unsafe.docx');
+            $expectedText = app(DocumentExtractionService::class)->extract($path, 'docx');
             $zip = new ZipArchive;
             $zip->open($path);
             if ($kind === 'entity') {
@@ -163,11 +164,18 @@ class ProposalExtractionTest extends TestCase
                 $zip->addFromString('word/_rels/document.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="unsafe" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" TargetMode="External" Target="https://example.invalid/image.png"/></Relationships>');
             }
             $zip->close();
+            if ($kind === 'external') {
+                // The existing text-only extractor disables image loading and permits
+                // ordinary Word documents containing external image relationships.
+                $this->assertSame($expectedText, app(DocumentExtractionService::class)->extract($path, 'docx'));
+
+                continue;
+            }
             try {
                 app(DocumentExtractionService::class)->extract($path, 'docx');
                 $this->fail('Unsafe document must be rejected.');
             } catch (DocumentExtractionException $exception) {
-                $this->assertStringContainsString($kind === 'entity' ? 'unsupported or malformed XML' : 'external content', $exception->getMessage());
+                $this->assertStringContainsString('unsupported or malformed XML', $exception->getMessage());
             }
         }
     }

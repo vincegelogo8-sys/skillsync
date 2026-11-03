@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AdviserRequest extends Model
 {
+    use SoftDeletes;
+
     public const ACTIVE_STATUSES = ['pending', 'approved'];
 
     protected function casts(): array

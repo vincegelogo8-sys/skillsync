@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class FacultyProfile extends Model
 {
@@ -33,29 +32,6 @@ class FacultyProfile extends Model
     public function expertise(): HasMany
     {
         return $this->hasMany(FacultyExpertise::class);
-    }
-
-    public function preferences(): HasMany
-    {
-        return $this->hasMany(FacultyPreference::class);
-    }
-
-    public function competency(): HasOne
-    {
-        return $this->hasOne(FacultyCompetency::class);
-    }
-
-    public function assessmentAttempts(): HasMany
-    {
-        return $this->hasMany(SkillsAssessmentAttempt::class);
-    }
-
-    public function latestCompletedAssessment(): HasOne
-    {
-        return $this->hasOne(SkillsAssessmentAttempt::class)->ofMany(
-            ['completed_at' => 'max', 'id' => 'max'],
-            fn ($query) => $query->whereNotNull('completed_at'),
-        );
     }
 
     public function recommendations(): HasMany

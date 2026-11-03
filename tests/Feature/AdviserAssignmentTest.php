@@ -27,7 +27,10 @@ class AdviserAssignmentTest extends TestCase
 
     private function faculty(): FacultyProfile
     {
-        return User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty = User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty->expertise()->create(['expertise_area' => 'Web Development']);
+
+        return $faculty;
     }
 
     public function test_approval_requires_a_valid_csrf_token(): void
@@ -183,9 +186,10 @@ class AdviserAssignmentTest extends TestCase
         $service->approve($first, $first->facultyProfile->user);
         $service->approve($second, $second->facultyProfile->user);
         $this->actingAs($first->studentProfile->user)->get('/student/assignments')->assertOk()->assertSee($first->researchProposal->title)->assertDontSee($second->researchProposal->title);
-        $this->actingAs($first->facultyProfile->user)->get('/faculty/assignments')->assertOk()->assertSee($first->researchProposal->title)->assertDontSee($second->researchProposal->title)->assertSee('Assigned Students');
+        $this->actingAs($first->facultyProfile->user)->get('/faculty/assignments')->assertOk()->assertSee($first->researchProposal->title)->assertDontSee($second->researchProposal->title)->assertSee('Assigned Students')
+            ->assertDontSee('View recommendations')->assertDontSee('View Adviser Recommendations')->assertDontSee('Research Topic Alignment');
         $this->actingAs($admin)->get('/admin/assignments')->assertOk()->assertSee($first->researchProposal->title)->assertSee($second->researchProposal->title);
-        $this->actingAs(User::factory()->create(['role' => User::ROLE_FACULTY]))->get('/faculty/assignments')->assertSee('No adviser assignments yet.');
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_FACULTY]))->get('/faculty/assignments')->assertSee('No adviser assignments.');
     }
 
     public function test_terminal_request_and_changed_faculty_role_cannot_be_approved(): void

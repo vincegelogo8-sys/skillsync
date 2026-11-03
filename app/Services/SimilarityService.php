@@ -18,7 +18,7 @@ class SimilarityService
         ProposalAnalysis $analysis,
         iterable $faculties
     ): array {
-        if (! $analysis->analyzed_at) {
+        if (! $analysis->hasCurrentAnalysis()) {
             throw new InvalidArgumentException(
                 'Complete proposal analysis before calculating similarity.'
             );
@@ -58,9 +58,7 @@ class SimilarityService
             $documents[$id] =
                 ($expertise->get($id)
                     ?? collect())
-                    ->pluck(
-                        'expertise_area'
-                    )
+                    ->pluck('expertise_area')
                     ->unique()
                     ->implode(' ');
         }
@@ -75,8 +73,7 @@ class SimilarityService
             );
         }
 
-        $text = app(ProposalSectionExtractor::class)
-            ->extract($analysis->extracted_text, $title)['analysis_text'];
+        $text = $analysis->research_representation;
 
         return $this->calculate(
             $text,
@@ -221,97 +218,9 @@ class SimilarityService
     public function tokenize(
         string $text
     ): array {
-        /*
-         * Normalize line endings.
-         */
-        $text = str_replace(
-            ["\r\n", "\r"],
-            "\n",
-            $text
-        );
-
-        /*
-         * Remove soft hyphens.
-         */
-        $text = str_replace(
-            "\u{00AD}",
-            '',
-            $text
-        );
-
-        /*
-         * Repair PDF line-wrap hyphenation.
-         *
-         * recommen-
-         * dation
-         *
-         * becomes:
-         *
-         * recommendation
-         */
-        $text = preg_replace(
-            '/(\p{L})-\h*\n\h*(\p{L})/u',
-            '$1$2',
-            $text
-        );
-
-        /*
-         * Normalize case.
-         */
-        $text = mb_strtolower(
-            $text
-        );
-
-        /*
-         * Normalize Unicode spaces/dashes.
-         */
-        $text = str_replace(
-            [
-                "\u{00A0}",
-                '–',
-                '—',
-                '−',
-            ],
-            [
-                ' ',
-                '-',
-                '-',
-                '-',
-            ],
-            $text
-        );
-
-        /*
-         * Convert normal word hyphens to spaces.
-         *
-         * web-based
-         * web based
-         *
-         * therefore produce the same tokens.
-         */
-        $text = preg_replace(
-            '/(?<=\p{L})-(?=\p{L})/u',
-            ' ',
-            $text
-        );
-
-        /*
-         * Remove standalone PDF page-number lines.
-         */
-        $text = preg_replace(
-            '/^\s*(?:page\s*)?\d+\s*$/imu',
-            ' ',
-            $text
-        );
-
-        /*
-         * Normalize remaining whitespace.
-         */
-        $text = preg_replace(
-            '/\s+/u',
-            ' ',
-            $text
-        );
+        $text = app(ProposalTextNormalizer::class)->normalize($text);
+        $text = preg_replace('/^\h*(?:page\h*)?\d+(?:\h*(?:of|\/)\h*\d+)?\h*$/imu', ' ', $text);
+        $text = app(ResearchConceptNormalizer::class)->text($text);
 
         /*
          * Preserve important punctuation in:

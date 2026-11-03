@@ -23,7 +23,7 @@ class AdviserRequestService
             abort_unless($actor->role === User::ROLE_STUDENT && $actor->studentProfile?->id === $proposal->student_profile_id, 404);
             $faculty = FacultyProfile::whereKey($faculty->id)->lockForUpdate()->firstOrFail();
             abort_unless($faculty->user->role === User::ROLE_FACULTY, 404);
-            if (! $proposal->analysis?->analyzed_at || ! $proposal->recommendations()->where('faculty_profile_id', $faculty->id)->exists()) {
+            if (! $proposal->analysis?->hasCurrentAnalysis() || ! $proposal->recommendations()->where('faculty_profile_id', $faculty->id)->exists()) {
                 throw ValidationException::withMessages(['adviser_request' => 'Generate recommendations and choose a recommended faculty member before requesting an adviser.']);
             }
             if ($proposal->assignment()->where('status', 'active')->exists()) {
@@ -69,6 +69,29 @@ class AdviserRequestService
             if ($status === 'declined') {
                 app(AdviserRequestNotificationService::class)->afterCommit($request, AdviserRequestDeclinedNotification::class, 'studentProfile');
             }
+        });
+    }
+
+    /** Hide a cancelled request from its owner's list while retaining its history. */
+    public function deleteCancelled(AdviserRequest $request, User $actor): void
+    {
+        DB::transaction(function () use ($request, $actor) {
+            $request = AdviserRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
+            $actor = User::findOrFail($actor->id);
+
+            abort_unless(
+                $actor->role === User::ROLE_STUDENT
+                && $actor->studentProfile?->id === $request->student_profile_id,
+                404
+            );
+
+            if ($request->status !== 'cancelled') {
+                throw ValidationException::withMessages([
+                    'adviser_request' => 'Only cancelled adviser requests can be deleted.',
+                ]);
+            }
+
+            $request->delete();
         });
     }
 }

@@ -95,14 +95,6 @@ document.querySelectorAll('[data-password-toggle]').forEach((checkbox) => {
     });
 });
 
-document.querySelectorAll('[data-close-breakdown]').forEach((button) => {
-    button.addEventListener('click', () => {
-        const details = button.closest('details');
-        details.open = false;
-        details.querySelector('summary').focus();
-    });
-});
-
 // Make existing scrollable tables keyboard-accessible without altering tables.
 document.querySelectorAll('.overflow-x-auto').forEach((region) => {
     if (!region.querySelector('table')) return;
@@ -156,17 +148,4 @@ window.addEventListener('pageshow', () => {
         button.disabled = false;
         delete button.dataset.busyDisabled;
     });
-});
-
-// Count selected answers only; no answer keys or score calculations are exposed.
-document.querySelectorAll('[data-assessment-form]').forEach((form) => {
-    const progress = form.querySelector('[data-assessment-progress]');
-    const count = form.querySelector('[data-answered-count]');
-    const update = () => {
-        const answered = new Set([...form.querySelectorAll('input[type="radio"]:checked')].map((input) => input.name)).size;
-        progress.value = answered;
-        count.textContent = answered;
-    };
-    form.addEventListener('change', update);
-    update();
 });

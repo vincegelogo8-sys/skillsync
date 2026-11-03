@@ -2,14 +2,14 @@
     <x-slot name="header">
         <h1 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Create Account') }}</h1>
     </x-slot>
-    <x-slot name="description">{{ __('Provide a new Student or Faculty member with access to SKILLSYNC.') }}</x-slot>
+
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <section class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
                 <div class="max-w-xl">
                     <p class="text-sm text-gray-600">
-                        {{ __('Create a Student or Faculty account, then give the account holder their email and initial password. They can change their password in Account Settings.') }}
+                        {{ __('Give the account holder their email and initial password after creating the account.') }}
                     </p>
                     @php
                         $name = old('name');

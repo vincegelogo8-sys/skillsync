@@ -51,16 +51,12 @@ class DashboardTest extends TestCase
         $this->assertDatabaseCount('recommendations', 0);
     }
 
-    public function test_faculty_sees_own_load_latest_completed_result_and_assigned_students(): void
+    public function test_faculty_sees_own_load_and_assigned_students(): void
     {
         [$student, $faculty] = $this->activity('Assigned To Me');
         $this->activity('Assigned Elsewhere');
         $profile = $faculty->facultyProfile;
-        foreach ([[90, '2026-01-01 10:00:00'], [70, '2026-01-02 10:00:00'], [null, null]] as [$score, $completed]) {
-            $attempt = $profile->assessmentAttempts()->make();
-            $attempt->forceFill(['total_items' => 10, 'percentage' => $score, 'score' => $score === null ? null : $score / 10, 'completed_at' => $completed])->save();
-        }
-        $this->actingAs($faculty)->get('/faculty/dashboard')->assertOk()->assertSee('Assigned To Me')->assertSee($student->name)->assertDontSee('Assigned Elsewhere')->assertSee('1 / 5')->assertSee('70.00%')
+        $this->actingAs($faculty)->get('/faculty/dashboard')->assertOk()->assertSee('Assigned To Me')->assertSee($student->name)->assertDontSee('Assigned Elsewhere')->assertSee('1 / 5')->assertDontSee('Latest Completed Assessment')
             ->assertDontSee(route('admin.advisory-limits.index'))->assertViewHas('metrics', fn ($metrics) => array_column($metrics, 'value', 'label')['Active Assignments'] === 1);
     }
 

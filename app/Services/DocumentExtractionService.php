@@ -90,7 +90,7 @@ class DocumentExtractionService
      */
     private function normalizeExtractedText(string $text): string
     {
-        return (new ProposalSectionExtractor)->normalize($text);
+        return app(ProposalTextNormalizer::class)->normalize($text);
     }
 
     private function pdf(string $path): string

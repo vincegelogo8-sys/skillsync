@@ -1,0 +1,23 @@
+Title: Network Intrusion Detection for Cloud Applications
+Abstract
+Cloud applications face credential theft and unauthorized network access.
+This research develops a network intrusion detection system using anomaly detection.
+Network traffic analysis identifies suspicious connections and unusual authentication patterns.
+A security dashboard presents threat alerts to administrators.
+Statement of the Problem
+Static security rules miss emerging attacks and generate frequent false alarms.
+Objectives
+Investigate anomaly detection for network intrusion detection.
+Evaluate role-based access control for incident management.
+Compare false alarm rates across traffic patterns.
+Methodology
+Audit logging records authentication events and access attempts.
+Traffic feature extraction summarizes packet frequency and connection duration.
+Encryption protects incident records stored in cloud databases.
+Background
+Cybersecurity requires continuous monitoring of distributed services.
+Incident management helps administrators investigate credential theft.
+Scope
+The prototype monitors cloud applications and provides a web interface for security teams.
+References
+Lee, B. (2024). Plant Disease Image Classification. Fictional Press.

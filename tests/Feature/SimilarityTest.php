@@ -18,7 +18,7 @@ class SimilarityTest extends TestCase
     public function test_tokenization_preserves_required_technical_terms_and_removes_generic_words(): void
     {
         $tokens = app(SimilarityService::class)->tokenize("PHP C++ C# .NET Node.js AI ML NLP IoT SQL API\nTHE research system study project development information application");
-        $this->assertSame(['php', 'c++', 'c#', '.net', 'node.js', 'ai', 'ml', 'nlp', 'iot', 'sql', 'api'], $tokens);
+        $this->assertSame(['php', 'c++', 'c#', '.net', 'node.js', 'artificial', 'intelligence', 'machine', 'learning', 'natural', 'language', 'processing', 'internet', 'things', 'sql', 'api'], $tokens);
         $this->assertSame(['web', 'café', 'node.js', '.net', 'mysql', 'javascript'], app(SimilarityService::class)->tokenize('Web-based CAFÉ nodejs dotnet MySQL JavaScript'));
     }
 
@@ -99,21 +99,24 @@ class SimilarityTest extends TestCase
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Web Development', 'file_path' => 'step14.pdf', 'original_filename' => 'step14.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         $analysis = $proposal->analysis()->make();
-        $analysis->extracted_text = 'Objectives: Web development and database systems.';
+        $analysis->extracted_text = 'Methodology: The web development system builds a web application using Laravel and PHP.';
         $analysis->save();
         $analysis = app(ProposalAnalysisService::class)->analyze($proposal);
         $before = $analysis->toArray();
         $faculty = User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
         $emptyFaculty = User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
-        $entry = $faculty->expertise()->create(['expertise_area' => 'Web Development', 'proficiency_score' => 10]);
+        $entry = $faculty->expertise()->create(['expertise_area' => 'Web Development']);
         $faculty->load('expertise');
         $service = app(SimilarityService::class);
         $result = $service->forProposal($analysis, [$faculty, $emptyFaculty, $faculty]);
-        $expected = $service->calculate("Web Development\nWeb development and database systems.", [$faculty->id => 'Web Development', $emptyFaculty->id => '']);
+        $expected = $service->calculate($analysis->research_representation, [
+            $faculty->id => 'Web Development',
+            $emptyFaculty->id => '',
+        ]);
         $this->assertSame($expected, $result);
+        $this->assertGreaterThan(0, $result['scores'][$faculty->id]);
         $this->assertSame(0.0, $result['scores'][$emptyFaculty->id]);
         $entry->update(['proficiency_score' => 100]);
-        $faculty->preferences()->create(['preference_type' => 'technology', 'preference_value' => 'PHP']);
         $this->assertSame($result, $service->forProposal($analysis, [$faculty, $emptyFaculty]));
         $entry->update(['expertise_area' => 'Networking']);
         $this->assertSame(0.0, $service->forProposal($analysis, [$faculty, $emptyFaculty])['scores'][$faculty->id]);

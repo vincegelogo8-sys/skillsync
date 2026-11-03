@@ -5,7 +5,7 @@
             {{ __('Research Proposals') }}
         </h1>
     </x-slot>
-    <x-slot name="description">{{ __('Manage research proposals and follow their progress toward adviser assignment.') }}</x-slot>
+
 
     <div class="py-12">
 
@@ -15,12 +15,6 @@
 
                 {{-- HEADER --}}
                 <div class="flex flex-wrap items-center justify-between gap-4">
-
-                    <p class="text-sm text-gray-600">
-                        {{ $admin
-                            ? __('Review submitted student research proposals.')
-                            : __('Your uploaded research proposals, newest first.') }}
-                    </p>
 
                     @unless ($admin)
                         <a
@@ -88,8 +82,7 @@
                                     href="{{ route(($admin ? 'admin' : 'student').'.proposals.show', $proposal) }}"
                                     class=" button button-secondary"
                                 >
-                                    {{ __('View proposal') }}
-                                    #{{ $proposal->id }}
+                                    {{ __('View') }}
                                 </a>
 
                                 {{-- QUICK DELETE ON LIST --}}
@@ -119,7 +112,7 @@
 
                     @empty
 
-                        <x-empty-state title="{{ __('No research proposals uploaded yet.') }}" />
+                        <x-empty-state title="{{ __('No proposals uploaded.') }}" />
 
                     @endforelse
 

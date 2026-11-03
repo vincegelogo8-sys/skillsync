@@ -1,19 +1,15 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountController;
-use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\AdviserAssignmentController;
 use App\Http\Controllers\AdviserRequestController;
 use App\Http\Controllers\AdvisoryThresholdController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\FacultyCompetencyController;
 use App\Http\Controllers\FacultyExpertiseController;
-use App\Http\Controllers\FacultyPreferenceController;
 use App\Http\Controllers\FacultyProfileController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\ResearchProposalController;
-use App\Http\Controllers\SkillsAssessmentController;
 use App\Http\Controllers\StudentProfileController;
 use App\Models\FacultyExpertise;
 use App\Models\FacultyProfile;
@@ -32,6 +28,13 @@ Route::model(
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get(
+    '/adviser-requests/{adviserRequest}/proposal',
+    [AdviserRequestController::class, 'viewProposal']
+)
+    ->middleware('auth')
+    ->name('adviser-requests.proposal');
 
 Route::get(
     '/dashboard',
@@ -82,6 +85,12 @@ Route::middleware([
             [AdviserRequestController::class, 'cancel']
         )
             ->name('requests.cancel');
+
+        Route::delete(
+            '/requests/{adviserRequest}',
+            [AdviserRequestController::class, 'destroy']
+        )
+            ->name('requests.destroy');
 
         Route::get(
             '/profile',
@@ -242,6 +251,12 @@ Route::middleware([
         )
             ->name('expertise.index');
 
+        Route::put(
+            '/expertise',
+            [FacultyExpertiseController::class, 'updateSkills']
+        )
+            ->name('expertise.skills.update');
+
         Route::post(
             '/expertise',
             [FacultyExpertiseController::class, 'store']
@@ -266,41 +281,6 @@ Route::middleware([
         )
             ->name('expertise.destroy');
 
-        Route::get(
-            '/preferences',
-            [FacultyPreferenceController::class, 'index']
-        )
-            ->name('preferences.index');
-
-        Route::patch(
-            '/preferences',
-            [FacultyPreferenceController::class, 'update']
-        )
-            ->name('preferences.update');
-
-        Route::get(
-            '/assessment',
-            [SkillsAssessmentController::class, 'index']
-        )
-            ->name('assessment.index');
-
-        Route::post(
-            '/assessment',
-            [SkillsAssessmentController::class, 'start']
-        )
-            ->name('assessment.start');
-
-        Route::get(
-            '/assessment/{attempt}',
-            [SkillsAssessmentController::class, 'show']
-        )
-            ->name('assessment.show');
-
-        Route::post(
-            '/assessment/{attempt}',
-            [SkillsAssessmentController::class, 'submit']
-        )
-            ->name('assessment.submit');
     });
 
 /*
@@ -333,10 +313,6 @@ Route::middleware([
             [AdviserAssignmentController::class, 'index']
         )
             ->name('assignments.index');
-
-
-
-
 
         Route::get(
             '/advisory-limits',
@@ -375,16 +351,22 @@ Route::middleware([
             ->name('accounts.store');
 
         Route::get(
+            '/accounts/{account}/edit',
+            [AccountController::class, 'edit']
+        )
+            ->name('accounts.edit');
+
+        Route::patch(
+            '/accounts/{account}',
+            [AccountController::class, 'update']
+        )
+            ->name('accounts.update');
+
+        Route::get(
             '/expertise',
             [FacultyExpertiseController::class, 'facultyList']
         )
             ->name('expertise.faculty');
-
-        Route::get(
-            '/competencies',
-            [FacultyCompetencyController::class, 'index']
-        )
-            ->name('competencies.index');
 
         /*
         |--------------------------------------------------------------------------
@@ -435,48 +417,6 @@ Route::middleware([
             [ResearchProposalController::class, 'analyze']
         )
             ->name('proposals.analyze');
-
-        Route::get(
-            '/proposals/{proposal}/recommendations',
-            [RecommendationController::class, 'index']
-        )
-            ->name('recommendations.index');
-
-        Route::post(
-            '/proposals/{proposal}/recommendations',
-            [RecommendationController::class, 'generate']
-        )
-            ->name('recommendations.generate');
-
-        Route::resource(
-            'assessment-questions',
-            AssessmentQuestionController::class
-        )
-            ->parameters([
-                'assessment-questions' =>
-                    'assessmentQuestion',
-            ])
-            ->except('show');
-
-        Route::get(
-            '/assessment-results',
-            [AssessmentQuestionController::class, 'results']
-        )
-            ->name(
-                'assessment-results.index'
-            );
-
-        Route::get(
-            '/faculty/{facultyProfile}/competency',
-            [FacultyCompetencyController::class, 'edit']
-        )
-            ->name('competencies.edit');
-
-        Route::patch(
-            '/faculty/{facultyProfile}/competency',
-            [FacultyCompetencyController::class, 'update']
-        )
-            ->name('competencies.update');
 
         Route::get(
             '/faculty/{facultyProfile}/expertise',

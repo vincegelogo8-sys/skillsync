@@ -1,0 +1,1009 @@
+{
+  "model_load_seconds": 40.332,
+  "tests": [
+    {
+      "fixture": "maintenance.txt",
+      "raw_seconds": 1.819,
+      "improved_seconds": 0.309,
+      "before": [
+        [
+          "school infrastructure maintenance",
+          0.6734
+        ],
+        [
+          "crowdsourced school infrastructure",
+          0.6522
+        ],
+        [
+          "crowdsourced school",
+          0.5473
+        ],
+        [
+          "infrastructure maintenance",
+          0.5441
+        ],
+        [
+          "school infrastructure",
+          0.5377
+        ],
+        [
+          "infrastructure maintenance abstract",
+          0.5362
+        ],
+        [
+          "abstract school infrastructure",
+          0.5339
+        ],
+        [
+          "facilities maintenance dashboard",
+          0.5271
+        ],
+        [
+          "crowdsourcing platform school",
+          0.5201
+        ],
+        [
+          "facilities maintenance",
+          0.5156
+        ]
+      ],
+      "after": {
+        "concepts": [
+          {
+            "phrase": "crowdsourced school infrastructure maintenance",
+            "score": 0.8526
+          },
+          {
+            "phrase": "maintenance prioritization",
+            "score": 0.6173
+          },
+          {
+            "phrase": "crowdsourcing platform",
+            "score": 0.5735
+          },
+          {
+            "phrase": "damage reporting",
+            "score": 0.5714
+          },
+          {
+            "phrase": "maintenance dashboard",
+            "score": 0.5496
+          },
+          {
+            "phrase": "transparent repair tracking",
+            "score": 0.5468
+          },
+          {
+            "phrase": "repair requests",
+            "score": 0.5343
+          },
+          {
+            "phrase": "public facility management",
+            "score": 0.4994
+          },
+          {
+            "phrase": "location data",
+            "score": 0.4654
+          },
+          {
+            "phrase": "geotagged photographs",
+            "score": 0.4203
+          }
+        ],
+        "diagnostics": {
+          "model_path": "C:\\xampp\\htdocs\\skillsync\\nlp\\models\\all-MiniLM-L6-v2",
+          "candidate_count": 33,
+          "embedded_candidates": 33,
+          "chunks": 7,
+          "section_weights": {
+            "title": 1.0,
+            "abstract": 0.8,
+            "problem": 0.8,
+            "objectives": 0.8,
+            "methodology": 0.5,
+            "background": 0.5,
+            "scope": 0.5
+          },
+          "signals": [
+            {
+              "phrase": "crowdsourced school infrastructure maintenance",
+              "score": 0.85256,
+              "semantic": 0.8608,
+              "section_importance": 1.0,
+              "support": 0.5,
+              "sections": [
+                "title"
+              ]
+            },
+            {
+              "phrase": "maintenance prioritization",
+              "score": 0.6172799999999999,
+              "semantic": 0.5104,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "problem"
+              ]
+            },
+            {
+              "phrase": "crowdsourcing platform",
+              "score": 0.57353,
+              "semantic": 0.4479,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "objectives"
+              ]
+            },
+            {
+              "phrase": "damage reporting",
+              "score": 0.57136,
+              "semantic": 0.4448,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "problem"
+              ]
+            },
+            {
+              "phrase": "maintenance dashboard",
+              "score": 0.54957,
+              "semantic": 0.4851,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "transparent repair tracking",
+              "score": 0.54679,
+              "semantic": 0.4097,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "problem",
+                "objectives"
+              ]
+            },
+            {
+              "phrase": "repair requests",
+              "score": 0.5343300000000001,
+              "semantic": 0.3919,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "methodology"
+              ]
+            },
+            {
+              "phrase": "public facility management",
+              "score": 0.49943999999999994,
+              "semantic": 0.4992,
+              "section_importance": 0.5,
+              "support": 0.5,
+              "sections": [
+                "background"
+              ]
+            },
+            {
+              "phrase": "location data",
+              "score": 0.46536,
+              "semantic": 0.3648,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "problem"
+              ]
+            },
+            {
+              "phrase": "geotagged photographs",
+              "score": 0.42028000000000004,
+              "semantic": 0.3004,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            }
+          ]
+        }
+      },
+      "settings_comparison": {
+        "no_mmr": [
+          {
+            "phrase": "crowdsourced school infrastructure maintenance",
+            "score": 0.8526
+          },
+          {
+            "phrase": "maintenance prioritization",
+            "score": 0.6173
+          },
+          {
+            "phrase": "crowdsourcing platform",
+            "score": 0.5735
+          },
+          {
+            "phrase": "damage reporting",
+            "score": 0.5714
+          },
+          {
+            "phrase": "maintenance dashboard",
+            "score": 0.5496
+          },
+          {
+            "phrase": "transparent repair tracking",
+            "score": 0.5468
+          },
+          {
+            "phrase": "repair requests",
+            "score": 0.5343
+          },
+          {
+            "phrase": "public facility management",
+            "score": 0.4994
+          },
+          {
+            "phrase": "location data",
+            "score": 0.4654
+          },
+          {
+            "phrase": "location maps",
+            "score": 0.4624
+          }
+        ],
+        "higher_diversity": [
+          {
+            "phrase": "crowdsourced school infrastructure maintenance",
+            "score": 0.8526
+          },
+          {
+            "phrase": "maintenance prioritization",
+            "score": 0.6173
+          },
+          {
+            "phrase": "crowdsourcing platform",
+            "score": 0.5735
+          },
+          {
+            "phrase": "damage reporting",
+            "score": 0.5714
+          },
+          {
+            "phrase": "maintenance dashboard",
+            "score": 0.5496
+          },
+          {
+            "phrase": "transparent repair tracking",
+            "score": 0.5468
+          },
+          {
+            "phrase": "repair requests",
+            "score": 0.5343
+          },
+          {
+            "phrase": "public facility management",
+            "score": 0.4994
+          },
+          {
+            "phrase": "location data",
+            "score": 0.4654
+          },
+          {
+            "phrase": "geotagged photographs",
+            "score": 0.4203
+          }
+        ],
+        "higher_semantic_floor": [
+          {
+            "phrase": "crowdsourced school infrastructure maintenance",
+            "score": 0.8526
+          },
+          {
+            "phrase": "maintenance prioritization",
+            "score": 0.6173
+          },
+          {
+            "phrase": "crowdsourcing platform",
+            "score": 0.5735
+          },
+          {
+            "phrase": "damage reporting",
+            "score": 0.5714
+          },
+          {
+            "phrase": "maintenance dashboard",
+            "score": 0.5496
+          },
+          {
+            "phrase": "transparent repair tracking",
+            "score": 0.5468
+          },
+          {
+            "phrase": "public facility management",
+            "score": 0.4994
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "vision.txt",
+      "raw_seconds": 1.146,
+      "improved_seconds": 0.367,
+      "before": [
+        [
+          "agricultural dataset image",
+          0.6046
+        ],
+        [
+          "deep learning plant",
+          0.5953
+        ],
+        [
+          "classify leaf images",
+          0.5939
+        ],
+        [
+          "plant disease detection",
+          0.5644
+        ],
+        [
+          "crop inspection",
+          0.5407
+        ],
+        [
+          "plant disease image",
+          0.5402
+        ],
+        [
+          "vision automated plant",
+          0.5396
+        ],
+        [
+          "diagnosis reduce crop",
+          0.5226
+        ],
+        [
+          "tomato leaf images",
+          0.5092
+        ],
+        [
+          "disease detection convolutional",
+          0.5085
+        ]
+      ],
+      "after": {
+        "concepts": [
+          {
+            "phrase": "plant disease image classification",
+            "score": 0.8157
+          },
+          {
+            "phrase": "automated plant disease detection",
+            "score": 0.7193
+          },
+          {
+            "phrase": "agricultural dataset",
+            "score": 0.5812
+          },
+          {
+            "phrase": "convolutional neural networks",
+            "score": 0.5741
+          },
+          {
+            "phrase": "computer vision",
+            "score": 0.5714
+          },
+          {
+            "phrase": "deep learning",
+            "score": 0.5517
+          },
+          {
+            "phrase": "tomato leaf images",
+            "score": 0.5505
+          },
+          {
+            "phrase": "manual crop inspection",
+            "score": 0.5178
+          },
+          {
+            "phrase": "image processing",
+            "score": 0.4927
+          },
+          {
+            "phrase": "transfer learning",
+            "score": 0.4871
+          }
+        ],
+        "diagnostics": {
+          "model_path": "C:\\xampp\\htdocs\\skillsync\\nlp\\models\\all-MiniLM-L6-v2",
+          "candidate_count": 36,
+          "embedded_candidates": 36,
+          "chunks": 6,
+          "section_weights": {
+            "title": 1.0,
+            "abstract": 0.8,
+            "objectives": 0.8,
+            "methodology": 0.5,
+            "background": 0.5,
+            "scope": 0.5
+          },
+          "signals": [
+            {
+              "phrase": "plant disease image classification",
+              "score": 0.8157400000000001,
+              "semantic": 0.8082,
+              "section_importance": 1.0,
+              "support": 0.5,
+              "sections": [
+                "title"
+              ]
+            },
+            {
+              "phrase": "automated plant disease detection",
+              "score": 0.7193200000000001,
+              "semantic": 0.7276,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "agricultural dataset",
+              "score": 0.58121,
+              "semantic": 0.5303,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "convolutional neural networks",
+              "score": 0.57409,
+              "semantic": 0.4487,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "objectives"
+              ]
+            },
+            {
+              "phrase": "computer vision",
+              "score": 0.57136,
+              "semantic": 0.4448,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "background"
+              ]
+            },
+            {
+              "phrase": "deep learning",
+              "score": 0.5517000000000001,
+              "semantic": 0.431,
+              "section_importance": 1.0,
+              "support": 0.5,
+              "sections": [
+                "title"
+              ]
+            },
+            {
+              "phrase": "tomato leaf images",
+              "score": 0.55054,
+              "semantic": 0.5722,
+              "section_importance": 0.5,
+              "support": 0.5,
+              "sections": [
+                "scope"
+              ]
+            },
+            {
+              "phrase": "manual crop inspection",
+              "score": 0.51778,
+              "semantic": 0.5254,
+              "section_importance": 0.5,
+              "support": 0.5,
+              "sections": [
+                "background"
+              ]
+            },
+            {
+              "phrase": "image processing",
+              "score": 0.49266,
+              "semantic": 0.4038,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "transfer learning",
+              "score": 0.48714999999999997,
+              "semantic": 0.3245,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "objectives"
+              ]
+            }
+          ]
+        }
+      },
+      "settings_comparison": {
+        "no_mmr": [
+          {
+            "phrase": "plant disease image classification",
+            "score": 0.8157
+          },
+          {
+            "phrase": "automated plant disease detection",
+            "score": 0.7193
+          },
+          {
+            "phrase": "agricultural dataset",
+            "score": 0.5812
+          },
+          {
+            "phrase": "convolutional neural networks",
+            "score": 0.5741
+          },
+          {
+            "phrase": "computer vision",
+            "score": 0.5714
+          },
+          {
+            "phrase": "deep learning",
+            "score": 0.5517
+          },
+          {
+            "phrase": "tomato leaf images",
+            "score": 0.5505
+          },
+          {
+            "phrase": "manual crop inspection",
+            "score": 0.5178
+          },
+          {
+            "phrase": "image processing",
+            "score": 0.4927
+          },
+          {
+            "phrase": "transfer learning",
+            "score": 0.4871
+          }
+        ],
+        "higher_diversity": [
+          {
+            "phrase": "plant disease image classification",
+            "score": 0.8157
+          },
+          {
+            "phrase": "automated plant disease detection",
+            "score": 0.7193
+          },
+          {
+            "phrase": "agricultural dataset",
+            "score": 0.5812
+          },
+          {
+            "phrase": "convolutional neural networks",
+            "score": 0.5741
+          },
+          {
+            "phrase": "computer vision",
+            "score": 0.5714
+          },
+          {
+            "phrase": "deep learning",
+            "score": 0.5517
+          },
+          {
+            "phrase": "tomato leaf images",
+            "score": 0.5505
+          },
+          {
+            "phrase": "manual crop inspection",
+            "score": 0.5178
+          },
+          {
+            "phrase": "transfer learning",
+            "score": 0.4871
+          },
+          {
+            "phrase": "data augmentation",
+            "score": 0.404
+          }
+        ],
+        "higher_semantic_floor": [
+          {
+            "phrase": "plant disease image classification",
+            "score": 0.8157
+          },
+          {
+            "phrase": "automated plant disease detection",
+            "score": 0.7193
+          },
+          {
+            "phrase": "agricultural dataset",
+            "score": 0.5812
+          },
+          {
+            "phrase": "convolutional neural networks",
+            "score": 0.5741
+          },
+          {
+            "phrase": "computer vision",
+            "score": 0.5714
+          },
+          {
+            "phrase": "deep learning",
+            "score": 0.5517
+          },
+          {
+            "phrase": "tomato leaf images",
+            "score": 0.5505
+          },
+          {
+            "phrase": "manual crop inspection",
+            "score": 0.5178
+          },
+          {
+            "phrase": "image processing",
+            "score": 0.4927
+          }
+        ]
+      }
+    },
+    {
+      "fixture": "security.txt",
+      "raw_seconds": 1.212,
+      "improved_seconds": 0.371,
+      "before": [
+        [
+          "intrusion detection cloud",
+          0.7074
+        ],
+        [
+          "intrusion detection using",
+          0.6065
+        ],
+        [
+          "detection cloud applications",
+          0.6055
+        ],
+        [
+          "detection network intrusion",
+          0.5982
+        ],
+        [
+          "intrusion detection",
+          0.594
+        ],
+        [
+          "network intrusion",
+          0.59
+        ],
+        [
+          "investigate anomaly detection",
+          0.5843
+        ],
+        [
+          "intrusion detection evaluate",
+          0.5763
+        ],
+        [
+          "anomaly detection network",
+          0.5687
+        ],
+        [
+          "network intrusion detection",
+          0.5652
+        ]
+      ],
+      "after": {
+        "concepts": [
+          {
+            "phrase": "network intrusion detection",
+            "score": 0.7601
+          },
+          {
+            "phrase": "cloud applications",
+            "score": 0.6578
+          },
+          {
+            "phrase": "anomaly detection",
+            "score": 0.636
+          },
+          {
+            "phrase": "threat alerts",
+            "score": 0.5923
+          },
+          {
+            "phrase": "security dashboard",
+            "score": 0.5809
+          },
+          {
+            "phrase": "cybersecurity",
+            "score": 0.5298
+          },
+          {
+            "phrase": "unusual authentication patterns",
+            "score": 0.5188
+          },
+          {
+            "phrase": "incident management",
+            "score": 0.5065
+          },
+          {
+            "phrase": "static security rules",
+            "score": 0.5037
+          },
+          {
+            "phrase": "credential theft",
+            "score": 0.4944
+          }
+        ],
+        "diagnostics": {
+          "model_path": "C:\\xampp\\htdocs\\skillsync\\nlp\\models\\all-MiniLM-L6-v2",
+          "candidate_count": 35,
+          "embedded_candidates": 35,
+          "chunks": 7,
+          "section_weights": {
+            "title": 1.0,
+            "abstract": 0.8,
+            "problem": 0.8,
+            "objectives": 0.8,
+            "methodology": 0.5,
+            "background": 0.5,
+            "scope": 0.5
+          },
+          "signals": [
+            {
+              "phrase": "network intrusion detection",
+              "score": 0.76011,
+              "semantic": 0.6573,
+              "section_importance": 1.0,
+              "support": 1.0,
+              "sections": [
+                "title",
+                "abstract",
+                "objectives"
+              ]
+            },
+            {
+              "phrase": "cloud applications",
+              "score": 0.65777,
+              "semantic": 0.5111,
+              "section_importance": 1.0,
+              "support": 1.0,
+              "sections": [
+                "title",
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "anomaly detection",
+              "score": 0.63602,
+              "semantic": 0.6086,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "threat alerts",
+              "score": 0.5923400000000001,
+              "semantic": 0.5462,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "security dashboard",
+              "score": 0.5809300000000001,
+              "semantic": 0.5299,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "cybersecurity",
+              "score": 0.52982,
+              "semantic": 0.5426,
+              "section_importance": 0.5,
+              "support": 0.5,
+              "sections": [
+                "background"
+              ]
+            },
+            {
+              "phrase": "unusual authentication patterns",
+              "score": 0.5187700000000001,
+              "semantic": 0.4411,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "abstract"
+              ]
+            },
+            {
+              "phrase": "incident management",
+              "score": 0.50647,
+              "semantic": 0.3521,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "objectives",
+                "background"
+              ]
+            },
+            {
+              "phrase": "static security rules",
+              "score": 0.50365,
+              "semantic": 0.4195,
+              "section_importance": 0.8,
+              "support": 0.5,
+              "sections": [
+                "problem"
+              ]
+            },
+            {
+              "phrase": "credential theft",
+              "score": 0.49443000000000004,
+              "semantic": 0.3349,
+              "section_importance": 0.8,
+              "support": 1.0,
+              "sections": [
+                "abstract",
+                "background"
+              ]
+            }
+          ]
+        }
+      },
+      "settings_comparison": {
+        "no_mmr": [
+          {
+            "phrase": "network intrusion detection",
+            "score": 0.7601
+          },
+          {
+            "phrase": "cloud applications",
+            "score": 0.6578
+          },
+          {
+            "phrase": "anomaly detection",
+            "score": 0.636
+          },
+          {
+            "phrase": "threat alerts",
+            "score": 0.5923
+          },
+          {
+            "phrase": "security dashboard",
+            "score": 0.5809
+          },
+          {
+            "phrase": "cybersecurity",
+            "score": 0.5298
+          },
+          {
+            "phrase": "network traffic analysis",
+            "score": 0.5277
+          },
+          {
+            "phrase": "emerging attacks",
+            "score": 0.5203
+          },
+          {
+            "phrase": "unusual authentication patterns",
+            "score": 0.5188
+          },
+          {
+            "phrase": "frequent false alarms",
+            "score": 0.5116
+          }
+        ],
+        "higher_diversity": [
+          {
+            "phrase": "network intrusion detection",
+            "score": 0.7601
+          },
+          {
+            "phrase": "cloud applications",
+            "score": 0.6578
+          },
+          {
+            "phrase": "anomaly detection",
+            "score": 0.636
+          },
+          {
+            "phrase": "threat alerts",
+            "score": 0.5923
+          },
+          {
+            "phrase": "security dashboard",
+            "score": 0.5809
+          },
+          {
+            "phrase": "unusual authentication patterns",
+            "score": 0.5188
+          },
+          {
+            "phrase": "frequent false alarms",
+            "score": 0.5116
+          },
+          {
+            "phrase": "incident management",
+            "score": 0.5065
+          },
+          {
+            "phrase": "static security rules",
+            "score": 0.5037
+          },
+          {
+            "phrase": "credential theft",
+            "score": 0.4944
+          }
+        ],
+        "higher_semantic_floor": [
+          {
+            "phrase": "network intrusion detection",
+            "score": 0.7601
+          },
+          {
+            "phrase": "cloud applications",
+            "score": 0.6578
+          },
+          {
+            "phrase": "anomaly detection",
+            "score": 0.636
+          },
+          {
+            "phrase": "threat alerts",
+            "score": 0.5923
+          },
+          {
+            "phrase": "security dashboard",
+            "score": 0.5809
+          },
+          {
+            "phrase": "cybersecurity",
+            "score": 0.5298
+          },
+          {
+            "phrase": "network traffic analysis",
+            "score": 0.5277
+          },
+          {
+            "phrase": "emerging attacks",
+            "score": 0.5203
+          },
+          {
+            "phrase": "unusual authentication patterns",
+            "score": 0.5188
+          },
+          {
+            "phrase": "static security rules",
+            "score": 0.5037
+          }
+        ]
+      }
+    }
+  ]
+}

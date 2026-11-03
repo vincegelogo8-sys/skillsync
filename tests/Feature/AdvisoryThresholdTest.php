@@ -19,7 +19,10 @@ class AdvisoryThresholdTest extends TestCase
 
     private function faculty(): FacultyProfile
     {
-        return User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty = User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty->expertise()->create(['expertise_area' => 'Web Development']);
+
+        return $faculty;
     }
 
     private function proposal(): ResearchProposal
@@ -79,7 +82,7 @@ class AdvisoryThresholdTest extends TestCase
         $this->assertSame([], $service->forFaculties([]));
     }
 
-    public function test_admin_increase_restores_availability_without_regenerating_or_changing_rank(): void
+    public function test_admin_increase_restores_availability_without_regenerating_matches(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $faculty = $this->faculty();
@@ -91,22 +94,68 @@ class AdvisoryThresholdTest extends TestCase
         $analysis->extracted_text = 'Objectives: Web application using PHP.';
         $analysis->save();
         app(ProposalAnalysisService::class)->analyze($proposal);
-        $before = app(RecommendationService::class)->generate($proposal, $admin)->sole()->toArray();
+        $before = app(RecommendationService::class)->generate($proposal, $admin)->sole();
+        $beforeAttributes = $before->getAttributes();
         $url = '/student/proposals/'.$proposal->id.'/recommendations';
-        $this->actingAs($proposal->studentProfile->user)->get($url)->assertOk()->assertSee('5 / 5')->assertSee('FULL')->assertSee('disabled', false)->assertSee('Request Adviser');
+        $this->actingAs($proposal->studentProfile->user)->get($url)->assertOk()->assertSee('Students Handled: 5')->assertDontSee('5 / 5')->assertSee('FULL')->assertSee('disabled', false)->assertSee('Request Adviser');
         $edit = '/admin/faculty/'.$faculty->id.'/advisory-limit';
         $this->actingAs($admin)->get('/admin/advisory-limits')->assertOk()->assertSee($faculty->user->name)->assertSee('5 / 5');
         $this->get($edit)->assertOk()->assertSee('Advisory limit');
         $this->patch($edit, ['advisory_limit' => 6, 'current_advisee_count' => 0, 'department' => 'Tampered'])->assertRedirect($edit)->assertSessionHasNoErrors();
         $this->get($edit)->assertSee('5 / 6')->assertSee('AVAILABLE');
         $this->assertSame('Computing', $faculty->fresh()->department);
-        $this->actingAs($proposal->studentProfile->user)->get($url)->assertOk()->assertSee('5 / 6')->assertSee('AVAILABLE')->assertDontSee('This adviser has reached their advisory limit.');
-        $this->assertSame($before, $proposal->recommendations()->sole()->toArray());
+        $this->actingAs($proposal->studentProfile->user)->get($url)->assertOk()->assertSee('Students Handled: 5')->assertDontSee('5 / 6')->assertSee('AVAILABLE')->assertDontSee('This adviser has reached their advisory limit.');
+        $current = $proposal->recommendations()->sole();
+        $this->assertSame($beforeAttributes['details'], $current->getAttributes()['details']);
+        $this->assertSame($beforeAttributes['updated_at'], $current->getAttributes()['updated_at']);
+        $this->assertNull($current->topic_alignment_score);
         $this->assertDatabaseCount('adviser_assignments', 5);
         $this->actingAs($admin)->patch($edit, ['advisory_limit' => 2])->assertSessionHasNoErrors();
         $this->get($edit)->assertSee('5 / 2')->assertSee('FULL');
         $this->assertDatabaseCount('adviser_assignments', 5);
         $this->assertSame(2, $faculty->fresh()->advisory_limit);
+    }
+
+    public static function studentLoadCases(): array
+    {
+        return [[0, 'AVAILABLE'], [3, 'AVAILABLE'], [5, 'FULL'], [7, 'FULL']];
+    }
+
+    #[DataProvider('studentLoadCases')]
+    public function test_student_sees_only_current_load_while_admin_keeps_limit(int $load, string $status): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $faculty = $this->faculty();
+        for ($i = 0; $i < $load; $i++) {
+            $this->assignment($faculty, $admin);
+        }
+        $this->assignment($faculty, $admin, 'completed');
+        $this->assignment($faculty, $admin, 'cancelled');
+        $proposal = $this->proposal();
+        $analysis = $proposal->analysis()->make();
+        $analysis->extracted_text = 'Objectives: Web application using PHP.';
+        $analysis->save();
+        app(ProposalAnalysisService::class)->analyze($proposal);
+        $before = app(RecommendationService::class)->generate($proposal, $admin)->sole()->getAttributes();
+
+        $this->actingAs($proposal->studentProfile->user)
+            ->get(route('student.recommendations.index', $proposal))
+            ->assertOk()
+            ->assertSee($faculty->user->name)
+            ->assertSee('Students Handled: '.$load.'</p>', false)
+            ->assertDontSee('Advisory Load')
+            ->assertDontSee($load.' / 5')
+            ->assertSee($status)
+            ->assertDontSee('Rank #')
+            ->assertDontSee('%')
+            ->assertDontSee('Research Topic Alignment');
+
+        $this->actingAs($admin)->get(route('admin.advisory-limits.index'))
+            ->assertOk()->assertSee($faculty->user->name)->assertSee($load.' / 5');
+        $current = $proposal->recommendations()->sole();
+        $this->assertSame($before, $current->getAttributes());
+        $this->assertSame(5, $faculty->fresh()->advisory_limit);
+        $this->assertDatabaseCount('adviser_assignments', $load + 2);
     }
 
     public static function invalidLimits(): array

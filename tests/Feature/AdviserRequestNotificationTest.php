@@ -32,6 +32,7 @@ class AdviserRequestNotificationTest extends TestCase
         parent::setUp();
         Notification::fake();
         Storage::fake('proposals');
+        config(['app.email_base_url' => 'http://192.168.50.20:8000']);
     }
 
     private function scenario(): array
@@ -42,6 +43,7 @@ class AdviserRequestNotificationTest extends TestCase
         $profile = $student->studentProfile()->create(['student_number' => 'S-'.$student->id, 'course' => 'BSIT', 'year_level' => 3, 'section' => 'B']);
         $faculty = User::factory()->create(['role' => User::ROLE_FACULTY, 'email' => 'faculty@gmail.com']);
         $facultyProfile = $faculty->facultyProfile()->create(['department' => 'Computing']);
+        $facultyProfile->expertise()->create(['expertise_area' => 'Web Development']);
         $proposal = $profile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Web application research', 'file_path' => 'proposal.pdf', 'original_filename' => 'proposal.pdf', 'file_type' => 'pdf', 'status' => 'extracted'])->save();
         Storage::disk('proposals')->put('proposal.pdf', DocumentFixtures::pdf());
@@ -66,7 +68,7 @@ class AdviserRequestNotificationTest extends TestCase
             $this->assertSame('faculty@gmail.com', $faculty->routeNotificationFor('mail', $notification));
             $mail = $notification->toMail($faculty);
             $this->assertSame('New Research Adviser Request - SKILLSYNC', $mail->subject);
-            $this->assertSame(route('faculty.requests.index'), $mail->actionUrl);
+            $this->assertSame('http://192.168.50.20:8000/faculty/requests', $mail->actionUrl);
             $this->assertSame([[$request->studentProfile->user->email, $request->studentProfile->user->name]], $mail->replyTo);
             $this->assertContains('Student Email: '.$request->studentProfile->user->email, $mail->introLines);
             $this->assertStringContainsString($request->researchProposal->title, $mail->render());
@@ -127,7 +129,7 @@ class AdviserRequestNotificationTest extends TestCase
         Notification::assertSentTo($student, AdviserRequestAcceptedNotification::class, function ($notification) use ($student, $faculty) {
             $mail = $notification->toMail($student);
             $this->assertSame('Adviser Request Accepted - SKILLSYNC', $mail->subject);
-            $this->assertSame(route('student.requests.index'), $mail->actionUrl);
+            $this->assertSame('http://192.168.50.20:8000/student/requests', $mail->actionUrl);
             $this->assertStringContainsString($faculty->name, implode(' ', $mail->introLines));
             $this->assertSame('student@gmail.com', $student->routeNotificationFor('mail', $notification));
 
@@ -149,7 +151,7 @@ class AdviserRequestNotificationTest extends TestCase
         Notification::assertSentTo($student, AdviserRequestDeclinedNotification::class, function ($notification) use ($student, $proposal) {
             $mail = $notification->toMail($student);
             $this->assertSame('Adviser Request Update - SKILLSYNC', $mail->subject);
-            $this->assertSame(route('student.recommendations.index', $proposal), $mail->actionUrl);
+            $this->assertSame('http://192.168.50.20:8000/student/proposals/'.$proposal->id.'/recommendations', $mail->actionUrl);
 
             return true;
         });

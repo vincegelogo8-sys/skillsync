@@ -111,7 +111,7 @@ class ResearchProposalTest extends TestCase
         $student = $this->student();
         $file = $type === 'pdf' ? $this->pdf() : $this->docx();
         $contents = file_get_contents($file->getRealPath());
-        $this->actingAs($student)->get('/student/proposals')->assertOk()->assertSee('No research proposals uploaded yet.');
+        $this->actingAs($student)->get('/student/proposals')->assertOk()->assertSee('No proposals uploaded.');
         $this->get('/student/proposals/create')->assertOk()->assertSee('multipart/form-data', false);
         $proposal = $this->upload($student, $file);
         $this->assertSame($type, $proposal->file_type);
@@ -122,7 +122,7 @@ class ResearchProposalTest extends TestCase
         Storage::disk('proposals')->assertExists($proposal->file_path);
         $this->assertSame($contents, Storage::disk('proposals')->get($proposal->file_path));
         $this->assertArrayNotHasKey('file_path', $proposal->toArray());
-        $this->get('/student/proposals/'.$proposal->id)->assertOk()->assertSee('Research proposal uploaded successfully.')
+        $this->get('/student/proposals/'.$proposal->id)->assertOk()->assertSee('Proposal uploaded successfully.')
             ->assertSee('proposal.'.$type)->assertDontSee($proposal->file_path)->assertDontSee('storage/app/private');
         $this->get('/student/proposals')->assertSee('Research Proposal Example')->assertDontSee($proposal->file_path);
         $response = $this->get('/student/proposals/'.$proposal->id.'/download')->assertOk()->assertDownload('proposal.'.$type)

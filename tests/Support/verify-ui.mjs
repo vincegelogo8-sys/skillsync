@@ -1,7 +1,7 @@
 // Run after SKILLSYNC_E2E_CAPTURE=1 generates test-only HTML snapshots.
 // Uses installed Edge and Node built-ins; no browser package or production login.
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdtempSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as pause } from 'node:timers/promises';
@@ -48,7 +48,9 @@ try {
     const report = [];
 
     const selectedPages = process.env.SKILLSYNC_UI_PAGES?.split(',');
-    const sources = readdirSync(output).filter(file => file.endsWith('.html')).map(file => file.slice(0,-5)).filter(name => !selectedPages || selectedPages.includes(name));
+    const manifest = join(output, 'current-pages.json');
+    if (!existsSync(manifest)) throw new Error('Capture UiPresentationTest with SKILLSYNC_E2E_CAPTURE=1 first.');
+    const sources = JSON.parse(readFileSync(manifest, 'utf8')).filter(name => !selectedPages || selectedPages.includes(name));
     const widths = process.env.SKILLSYNC_UI_WIDTHS?.split(',').map(Number) || [1440, 390];
     for (const source of sources) for (const width of widths) {
         const name = source + '-' + width;
@@ -66,14 +68,6 @@ try {
                 const opened=menu.getAttribute('aria-expanded')==='true' && document.querySelector('.app-main').inert;
                 document.querySelector('[data-sidebar-close]').click();
                 return opened && menu.getAttribute('aria-expanded')==='false' && !document.querySelector('.app-main').inert;
-            })()`);
-        }
-        let assessment = true;
-        if (source === 'faculty-assessment-active') {
-            assessment = await evaluate(`(() => {
-                const input=document.querySelector('[data-assessment-form] input[type="radio"]');
-                input.click();
-                return document.querySelector('[data-assessment-progress]').value===1 && document.querySelector('[data-answered-count]').textContent==='1';
             })()`);
         }
         const screenshot = await command('Page.captureScreenshot', {format:'png',captureBeyondViewport:true,clip:{x:0,y:0,width,height:Math.min(metrics.height,5000),scale:1}}, sessionId);
@@ -97,8 +91,8 @@ try {
             window.confirm = originalConfirm;
             return cancelledIsIdle && busy && duplicateBlocked && !button.disabled && !form.hasAttribute('aria-busy');
         })()`);
-        const passed=metrics.scroll<=metrics.client && metrics.styles>0 && metrics.h1===1 && (!metrics.workspace || metrics.active===1) && navigation && assessment && submission;
-        report.push({name,...metrics,navigation,assessment,submission,passed});
+        const passed=metrics.scroll<=metrics.client && metrics.styles>0 && metrics.h1===1 && (!metrics.workspace || metrics.active===1) && navigation && submission;
+        report.push({name,...metrics,navigation,submission,passed});
     }
     writeFileSync(join(output, 'browser-report.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify({checked:report.length,passed:report.filter(item=>item.passed).length,failed:report.filter(item=>!item.passed)},null,2));

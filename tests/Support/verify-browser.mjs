@@ -54,15 +54,15 @@ try {
         ['admin-mobile', 'admin-pdf', 390, true],
         ['faculty-tablet', 'faculty-pdf', 768, true],
         ['student-small-mobile', 'student-pdf', 320, true],
-        ['ranking-desktop', 'ranking-pdf', 1440, false],
-        ['ranking-mobile', 'ranking-pdf', 390, true],
+        ['recommendations-desktop', 'recommendations-pdf', 1440, false],
+        ['recommendations-mobile', 'recommendations-pdf', 390, true],
     ]) {
         await command('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile }, sessionId);
         await command('Page.navigate', { url: pathToFileURL(join(output, `${source}.html`)).href }, sessionId);
         await pause(500);
         await evaluate('document.fonts.ready.then(() => true)');
         const metrics = await evaluate('({width:innerWidth,client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,styles:document.styleSheets.length})');
-        const selector = name.startsWith('ranking') ? 'article details' : '[data-dropdown]';
+        const selector = '[data-dropdown]';
         await evaluate(`window.checkDetails = [...document.querySelectorAll(${JSON.stringify(selector)})].at(-1); window.checkDetails.querySelector('summary').focus(); true`);
         await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' }, sessionId);
         await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 }, sessionId);

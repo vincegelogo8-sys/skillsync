@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'email_base_url' => env('SKILLSYNC_EMAIL_BASE_URL'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

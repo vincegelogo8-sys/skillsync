@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\AdviserRequest;
+use App\Services\EmailLinkGenerator;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -28,7 +29,7 @@ class AdviserRequestReceivedNotification extends Notification
             ->line('Research Title: '.$this->request->researchProposal->title)
             ->line('The student has selected you as a potential research adviser through SKILLSYNC.')
             ->line('Please log in to SKILLSYNC to review the adviser request.')
-            ->action('View Adviser Request', route('faculty.requests.index'))
+            ->action('View Adviser Request', app(EmailLinkGenerator::class)->route('faculty.requests.index'))
             ->salutation("Thank you,\nSKILLSYNC\nResearch Adviser Recommendation System");
     }
 }

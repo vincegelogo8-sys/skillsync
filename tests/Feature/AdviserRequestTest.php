@@ -31,6 +31,7 @@ class AdviserRequestTest extends TestCase
         $analysis->save();
         app(ProposalAnalysisService::class)->analyze($proposal);
         $faculty = User::factory()->create(['role' => User::ROLE_FACULTY])->facultyProfile()->create(['department' => 'Computing']);
+        $faculty->expertise()->create(['expertise_area' => 'Web Development']);
         app(RecommendationService::class)->generate($proposal, $student);
 
         return [$student, $proposal, $faculty];
@@ -39,6 +40,24 @@ class AdviserRequestTest extends TestCase
     private function url(ResearchProposal $proposal, FacultyProfile $faculty): string
     {
         return '/student/proposals/'.$proposal->id.'/requests/'.$faculty->id;
+    }
+
+    private function requestWithStatus(User $student, ResearchProposal $proposal, string $status): AdviserRequest
+    {
+        $facultyUser = User::factory()->create(['role' => User::ROLE_FACULTY]);
+        $faculty = $facultyUser->facultyProfile()->create(['department' => 'Computing']);
+        $adviserRequest = new AdviserRequest;
+        $adviserRequest->forceFill([
+            'student_profile_id' => $student->studentProfile->id,
+            'faculty_profile_id' => $faculty->id,
+            'research_proposal_id' => $proposal->id,
+            'status' => $status,
+            'active_slot' => in_array($status, ['pending', 'approved'], true) ? 1 : null,
+            'requested_at' => now(),
+            'responded_at' => in_array($status, ['pending', 'approved'], true) ? null : now(),
+        ])->save();
+
+        return $adviserRequest;
     }
 
     public function test_request_submission_and_cancellation_enforce_csrf(): void
@@ -56,6 +75,84 @@ class AdviserRequestTest extends TestCase
         $this->assertSame('pending', $request->fresh()->status);
         $this->withSession(['_token' => $token])->patch($cancel, ['_token' => $token])->assertSessionHasNoErrors();
         $this->assertSame('cancelled', $request->fresh()->status);
+        $delete = route('student.requests.destroy', $request);
+        $this->delete($delete)->assertStatus(419);
+        $this->withSession(['_token' => $token])->delete($delete, ['_token' => $token])
+            ->assertRedirect(route('student.requests.index'))
+            ->assertSessionHas('status', 'request-deleted');
+        $this->assertSoftDeleted('adviser_requests', ['id' => $request->id]);
+    }
+
+    public function test_only_cancelled_student_requests_show_a_delete_action(): void
+    {
+        [$student, $proposal] = $this->setupProposal();
+        $cancelled = $this->requestWithStatus($student, $proposal, 'cancelled');
+        $declined = $this->requestWithStatus($student, $proposal, 'declined');
+        $pending = $this->requestWithStatus($student, $proposal, 'pending');
+        $approved = $this->requestWithStatus($student, $proposal, 'approved');
+
+        $this->actingAs($student)->get(route('student.requests.index'))
+            ->assertOk()
+            ->assertSee('Delete Request')
+            ->assertSee('action="'.route('student.requests.destroy', $cancelled).'"', false)
+            ->assertDontSee('action="'.route('student.requests.destroy', $declined).'"', false)
+            ->assertDontSee('action="'.route('student.requests.destroy', $pending).'"', false)
+            ->assertDontSee('action="'.route('student.requests.destroy', $approved).'"', false);
+    }
+
+    public function test_owner_can_soft_delete_only_cancelled_request_and_related_records_remain(): void
+    {
+        [$student, $proposal] = $this->setupProposal();
+        $cancelled = $this->requestWithStatus($student, $proposal, 'cancelled');
+
+        $this->actingAs($student)->delete(route('student.requests.destroy', $cancelled))
+            ->assertRedirect(route('student.requests.index'))
+            ->assertSessionHas('status', 'request-deleted');
+
+        $this->assertSoftDeleted('adviser_requests', ['id' => $cancelled->id]);
+        $this->assertDatabaseHas('research_proposals', ['id' => $proposal->id]);
+        $this->assertDatabaseHas('student_profiles', ['id' => $student->studentProfile->id]);
+        $this->assertDatabaseHas('faculty_profiles', ['id' => $cancelled->faculty_profile_id]);
+        $this->assertDatabaseCount('adviser_requests', 1);
+        $this->assertSame(0, AdviserRequest::whereKey($cancelled->id)->count());
+    }
+
+    public function test_another_student_cannot_delete_the_cancelled_request(): void
+    {
+        [$student, $proposal] = $this->setupProposal();
+        $cancelled = $this->requestWithStatus($student, $proposal, 'cancelled');
+        $otherStudent = User::factory()->create(['role' => User::ROLE_STUDENT]);
+        $otherStudent->studentProfile()->create([
+            'student_number' => 'S-'.$otherStudent->id,
+            'course' => 'BSIT',
+            'year_level' => 2,
+            'section' => 'A',
+        ]);
+
+        $this->actingAs($otherStudent)->delete(route('student.requests.destroy', $cancelled))->assertNotFound();
+        $this->assertDatabaseHas('adviser_requests', ['id' => $cancelled->id, 'deleted_at' => null]);
+    }
+
+    public function test_pending_approved_and_declined_requests_cannot_be_deleted(): void
+    {
+        [$student, $proposal] = $this->setupProposal();
+        $requests = [
+            $this->requestWithStatus($student, $proposal, 'pending'),
+            $this->requestWithStatus($student, $proposal, 'approved'),
+            $this->requestWithStatus($student, $proposal, 'declined'),
+        ];
+
+        $this->actingAs($student);
+        foreach ($requests as $adviserRequest) {
+            $this->delete(route('student.requests.destroy', $adviserRequest))
+                ->assertRedirect(route('student.requests.index'))
+                ->assertSessionHasErrors('adviser_request');
+            $this->assertDatabaseHas('adviser_requests', [
+                'id' => $adviserRequest->id,
+                'status' => $adviserRequest->status,
+                'deleted_at' => null,
+            ]);
+        }
     }
 
     public function test_all_closed_request_history_survives_repeated_resubmission(): void
@@ -161,14 +258,16 @@ class AdviserRequestTest extends TestCase
         $request = $service->submit($proposal, $faculty, $student);
         $service->submit($otherProposal, $otherFaculty, $otherStudent);
         $this->actingAs($student)->get('/student/requests')->assertSee($proposal->title)->assertDontSee($otherProposal->title);
-        $this->actingAs($faculty->user)->get('/faculty/requests')->assertSee($proposal->title)->assertDontSee($otherProposal->title)->assertSee('Decline Request');
+        $this->actingAs($faculty->user)->get('/faculty/requests')->assertSee($proposal->title)->assertDontSee($otherProposal->title)->assertSee('Decline Request')
+            ->assertSee('Accept Request')->assertDontSee('View recommendations')->assertDontSee('View Adviser Recommendations')->assertDontSee('Research Topic Alignment');
         $this->actingAs($otherFaculty->user)->patch('/faculty/requests/'.$request->id.'/decline')->assertNotFound();
         $this->actingAs($otherStudent)->patch('/student/requests/'.$request->id.'/cancel')->assertNotFound();
         $this->actingAs($faculty->user)->patch('/faculty/requests/'.$request->id.'/decline')->assertRedirect('/faculty/requests');
         $this->assertSame('declined', $request->fresh()->status);
         $this->assertNull($request->fresh()->active_slot);
         $replacement = $service->submit($proposal, $faculty, $student);
-        $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->get('/admin/requests')->assertSee($proposal->title)->assertSee($otherProposal->title);
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->get('/admin/requests')->assertSee($proposal->title)->assertSee($otherProposal->title)
+            ->assertSee(route('admin.proposals.show', $proposal))->assertDontSee('View recommendations')->assertDontSee('Request Adviser');
         $this->patch('/admin/requests/'.$replacement->id.'/decline')->assertNotFound();
         $this->assertDatabaseCount('adviser_assignments', 0);
     }
@@ -202,6 +301,6 @@ class AdviserRequestTest extends TestCase
         $this->actingAs($student)->get('/student/requests')->assertSee($proposal->title)->assertDontSee($proposal->title, false)->assertDontSee($proposal->file_path);
         $proposal->delete();
         $this->assertDatabaseCount('adviser_requests', 0);
-        $this->get('/student/requests')->assertSee('No adviser requests yet.');
+        $this->get('/student/requests')->assertSee('No adviser requests.');
     }
 }
