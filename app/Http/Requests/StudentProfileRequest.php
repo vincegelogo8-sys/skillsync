@@ -21,9 +21,9 @@ class StudentProfileRequest extends FormRequest
                 Rule::unique('student_profiles', 'student_number')
                     ->ignore($this->user()->studentProfile?->id),
             ],
-            'course' => ['required', 'string', 'max:150'],
-            'year_level' => ['required', 'integer', 'between:1,6'],
-            'section' => ['required', 'string', 'max:50'],
+            'course' => ['required', 'string', Rule::in(config('student_options.courses'))],
+            'year_level' => ['required', 'integer', Rule::in(array_keys(config('student_options.year_levels')))],
+            'section' => ['required', 'string', Rule::in(config('student_options.sections'))],
         ];
     }
 }

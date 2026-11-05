@@ -86,11 +86,9 @@ class UiPresentationTest extends TestCase
         $this->page('faculty-assigned-students', '/faculty/assignments');
 
         $this->actingAs($admin);
-        foreach (['dashboard', 'accounts', 'accounts/create', 'expertise', 'advisory-limits', 'proposals', 'requests', 'assignments'] as $path) {
+        foreach (['dashboard', 'accounts', 'accounts/create', 'advisory-limits', 'proposals', 'requests', 'assignments'] as $path) {
             $this->page('admin-'.str_replace('/', '-', $path), '/admin/'.$path);
         }
-        $this->page('admin-expertise-detail', '/admin/faculty/'.$facultyProfile->id.'/expertise');
-        $this->page('admin-expertise-edit', '/admin/faculty/'.$facultyProfile->id.'/expertise/'.$expertise->id.'/edit');
         $this->page('admin-limit-edit', '/admin/faculty/'.$facultyProfile->id.'/advisory-limit');
         $this->page('admin-proposal-details', '/admin/proposals/'.$proposal->id);
         $this->get('/admin/proposals/'.$proposal->id.'/recommendations')->assertNotFound();

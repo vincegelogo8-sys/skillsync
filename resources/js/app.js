@@ -95,6 +95,18 @@ document.querySelectorAll('[data-password-toggle]').forEach((checkbox) => {
     });
 });
 
+const accountRoleSelect = document.querySelector('[data-account-role-select]');
+accountRoleSelect?.addEventListener('change', () => {
+    document.querySelectorAll('[data-account-role-group]').forEach((group) => {
+        const visible = group.dataset.accountRoleGroup === accountRoleSelect.value;
+        group.hidden = !visible;
+        group.querySelectorAll('[data-role-required]').forEach((input) => {
+            input.required = visible;
+        });
+    });
+});
+accountRoleSelect?.dispatchEvent(new Event('change'));
+
 // Make existing scrollable tables keyboard-accessible without altering tables.
 document.querySelectorAll('.overflow-x-auto').forEach((region) => {
     if (!region.querySelector('table')) return;

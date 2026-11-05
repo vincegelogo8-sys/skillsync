@@ -31,6 +31,21 @@ class UpdateAccountRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($account),
             ],
             'password' => ['nullable', 'string', 'confirmed', Password::defaults()],
+            'student_number' => $account->role === User::ROLE_STUDENT
+                ? ['required', 'string', 'max:50', Rule::unique('student_profiles', 'student_number')->ignore($account->studentProfile?->id)]
+                : ['exclude'],
+            'course' => $account->role === User::ROLE_STUDENT
+                ? ['required', 'string', Rule::in(config('student_options.courses'))]
+                : ['exclude'],
+            'year_level' => $account->role === User::ROLE_STUDENT
+                ? ['required', 'integer', Rule::in(array_keys(config('student_options.year_levels')))]
+                : ['exclude'],
+            'section' => $account->role === User::ROLE_STUDENT
+                ? ['required', 'string', Rule::in(config('student_options.sections'))]
+                : ['exclude'],
+            'department' => $account->role === User::ROLE_FACULTY
+                ? ['required', 'string', 'max:150']
+                : ['exclude'],
         ];
     }
 }

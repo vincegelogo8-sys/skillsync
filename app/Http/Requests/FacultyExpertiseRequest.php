@@ -10,40 +10,22 @@ use Illuminate\Validation\Rule;
 
 class FacultyExpertiseRequest extends FormRequest
 {
-    // Also used for read/delete routes so every action checks the same owner.
     public function profile(): ?FacultyProfile
     {
-        return $this->user()?->role === User::ROLE_ADMIN
-            ? $this->route('facultyProfile')
-            : $this->user()?->facultyProfile;
+        return $this->user()?->facultyProfile;
     }
 
     public function authorize(): bool
     {
-        if (! in_array($this->user()?->role, [User::ROLE_FACULTY, User::ROLE_ADMIN], true)) {
+        if ($this->user()?->role !== User::ROLE_FACULTY) {
             return false;
         }
 
-        if ($this->user()->role === User::ROLE_FACULTY) {
-            if ($this->routeIs('faculty.expertise.index')) {
-                return true;
-            }
-
-            return $this->routeIs('faculty.expertise.skills.update') && $this->profile() !== null;
+        if ($this->routeIs('faculty.expertise.index')) {
+            return true;
         }
 
-        $profile = $this->profile();
-        $expertise = $this->route('expertise');
-
-        if ($profile && $profile->user->role !== User::ROLE_FACULTY) {
-            return false;
-        }
-
-        if ($expertise instanceof FacultyExpertise) {
-            abort_unless($profile && $expertise->faculty_profile_id === $profile->id, 404);
-        }
-
-        return true;
+        return $this->routeIs('faculty.expertise.skills.update') && $this->profile() !== null;
     }
 
     public function rules(): array

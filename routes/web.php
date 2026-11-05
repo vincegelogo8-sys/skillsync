@@ -362,12 +362,6 @@ Route::middleware([
         )
             ->name('accounts.update');
 
-        Route::get(
-            '/expertise',
-            [FacultyExpertiseController::class, 'facultyList']
-        )
-            ->name('expertise.faculty');
-
         /*
         |--------------------------------------------------------------------------
         | Admin Proposal Review
@@ -418,35 +412,6 @@ Route::middleware([
         )
             ->name('proposals.analyze');
 
-        Route::get(
-            '/faculty/{facultyProfile}/expertise',
-            [FacultyExpertiseController::class, 'index']
-        )
-            ->name('expertise.index');
-
-        Route::post(
-            '/faculty/{facultyProfile}/expertise',
-            [FacultyExpertiseController::class, 'store']
-        )
-            ->name('expertise.store');
-
-        Route::get(
-            '/faculty/{facultyProfile}/expertise/{expertise}/edit',
-            [FacultyExpertiseController::class, 'edit']
-        )
-            ->name('expertise.edit');
-
-        Route::patch(
-            '/faculty/{facultyProfile}/expertise/{expertise}',
-            [FacultyExpertiseController::class, 'update']
-        )
-            ->name('expertise.update');
-
-        Route::delete(
-            '/faculty/{facultyProfile}/expertise/{expertise}',
-            [FacultyExpertiseController::class, 'destroy']
-        )
-            ->name('expertise.destroy');
     });
 
 /*

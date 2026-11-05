@@ -18,7 +18,7 @@ class StudentProfileTest extends TestCase
             'student_number' => '2026-0001',
             'course' => 'BS Information Technology',
             'year_level' => 3,
-            'section' => 'BSIT 3-B',
+            'section' => 'A',
         ], $overrides);
     }
 
@@ -67,12 +67,12 @@ class StudentProfileTest extends TestCase
         $this->get('/student/profile')->assertOk()
             ->assertSee('2026-0001')->assertSee('BS Information Technology');
 
-        $this->patch('/student/profile', $this->details(['year_level' => 4, 'section' => 'BSIT 4-A']))
+        $this->patch('/student/profile', $this->details(['year_level' => 4, 'section' => 'C']))
             ->assertSessionHasNoErrors()->assertRedirect('/student/profile');
         $this->assertDatabaseCount('student_profiles', 1);
         $this->assertSame($profile->id, $student->fresh()->studentProfile->id);
         $this->assertDatabaseHas('student_profiles', $this->details([
-            'user_id' => $student->id, 'year_level' => 4, 'section' => 'BSIT 4-A',
+            'user_id' => $student->id, 'year_level' => 4, 'section' => 'C',
         ]));
     }
 
@@ -126,7 +126,9 @@ class StudentProfileTest extends TestCase
             'long number' => ['student_number', str_repeat('x', 51)],
             'long course' => ['course', str_repeat('x', 151)],
             'long section' => ['section', str_repeat('x', 51)],
+            'unsupported section' => ['section', 'D'],
             'year below range' => ['year_level', 0],
+            'unsupported year' => ['year_level', 2],
             'year above range' => ['year_level', 7],
             'fractional year' => ['year_level', 2.5],
             'text year' => ['year_level', 'third'],
@@ -144,14 +146,14 @@ class StudentProfileTest extends TestCase
         $this->get('/student/profile')->assertOk();
     }
 
-    public function test_saved_text_is_escaped_when_rendered(): void
+    public function test_values_outside_the_option_lists_show_placeholders_without_rendering_raw_text(): void
     {
         $student = User::factory()->create();
         $course = '<script>alert(1)</script>';
-        $student->studentProfile()->create($this->details(['course' => $course]));
-
+        $student->studentProfile()->create($this->details(['course' => $course, 'section' => '<script>alert(2)</script>']));
         $this->actingAs($student)->get('/student/profile')
-            ->assertOk()->assertSee($course)->assertDontSee($course, false);
+            ->assertOk()->assertSee('Select course')->assertSee('Select section')
+            ->assertDontSee($course, false)->assertDontSee('<script>alert(2)</script>', false);
     }
 
     public function test_account_deletion_also_removes_its_student_profile(): void

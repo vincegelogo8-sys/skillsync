@@ -33,7 +33,6 @@ return [
         'secondary' => [
             ['route' => 'admin.accounts.index', 'label' => 'Accounts', 'description' => 'Create and review Student and Faculty accounts.', 'active' => ['admin.accounts.*']],
             ['route' => 'admin.advisory-limits.index', 'label' => 'Advisory Limits', 'description' => 'Review active loads and adjust capacity.', 'active' => ['admin.advisory-limits.*']],
-            ['route' => 'admin.expertise.faculty', 'label' => 'Faculty Skills', 'description' => 'Manage saved faculty skill categories.', 'active' => ['admin.expertise.*']],
         ],
     ],
 ];

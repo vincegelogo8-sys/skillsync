@@ -67,23 +67,24 @@ class EndToEndWorkflowTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin', 'name' => 'Test Admin']);
         $this->login($admin, 'password');
         foreach (['student' => 'Test Student', 'faculty' => 'Test Faculty'] as $role => $name) {
-            $this->send('post', '/admin/accounts', ['name' => $name, 'email' => $role.'@gmail.com', 'role' => $role, 'password' => 'workflow-password', 'password_confirmation' => 'workflow-password'])->assertSessionHasNoErrors();
+            $profile = $role === 'student'
+                ? ['student_number' => 'E2E-001', 'course' => 'BS Information Technology', 'year_level' => 3, 'section' => 'B']
+                : ['department' => 'Computing'];
+            $this->send('post', '/admin/accounts', ['name' => $name, 'email' => $role.'@gmail.com', 'role' => $role, 'password' => 'workflow-password', 'password_confirmation' => 'workflow-password', ...$profile])->assertSessionHasNoErrors();
             $this->assertAuthenticatedAs($admin);
         }
         $faculty = User::where('role', 'faculty')->sole();
         $student = User::where('role', 'student')->sole();
         $this->login($faculty, 'workflow-password');
         $this->send('patch', '/faculty/profile', ['name' => $faculty->name, 'department' => 'Computing'])->assertSessionHasNoErrors();
+        $this->send('put', '/faculty/expertise', ['skills' => ['Web Development', 'Database Systems']])->assertSessionHasNoErrors();
         $this->login($admin, 'password');
         $profile = $faculty->fresh()->facultyProfile;
-        foreach (['Web Development' => 90, 'Database Systems' => 80] as $area => $score) {
-            $this->send('post', '/admin/faculty/'.$profile->id.'/expertise', ['expertise_area' => $area, 'proficiency_score' => $score])->assertSessionHasNoErrors();
-        }
 
         $this->send('patch', '/admin/faculty/'.$profile->id.'/advisory-limit', ['advisory_limit' => 1])->assertSessionHasNoErrors();
 
         $this->login($student, 'workflow-password');
-        $this->send('patch', '/student/profile', ['student_number' => 'E2E-001', 'course' => 'BSIT', 'year_level' => 3, 'section' => 'B'])->assertSessionHasNoErrors();
+        $this->send('patch', '/student/profile', ['student_number' => 'E2E-001', 'course' => 'BS Information Technology', 'year_level' => 3, 'section' => 'B'])->assertSessionHasNoErrors();
         $bytes = $type === 'pdf' ? DocumentFixtures::pdf(['Abstract', 'Web application using Laravel PHP MySQL.', 'Objectives:', 'To develop a web application using Laravel PHP MySQL.', 'Database management and web development.']) : DocumentFixtures::docx();
         $this->send('post', '/student/proposals', ['title' => 'Web Application for Student Records', 'document' => UploadedFile::fake()->createWithContent('proposal.'.$type, $bytes)])->assertSessionHasNoErrors();
         $proposal = ResearchProposal::sole();

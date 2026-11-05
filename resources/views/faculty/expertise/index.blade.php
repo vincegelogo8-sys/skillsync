@@ -10,13 +10,6 @@
         <div class="max-w-7xl mx-auto space-y-6 sm:px-6 lg:px-8">
 
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                @if ($routePrefix === 'admin.expertise.')
-                    <a href="{{ route('admin.expertise.faculty') }}"
-                       class="button button-secondary">
-                        {{ __('Back to Faculty Skills') }}
-                    </a>
-                @endif
-
                 <h3 class="text-lg font-medium text-gray-900 mt-2">
                     {{ $profile->user->name }}
                 </h3>
@@ -73,95 +66,16 @@
 
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
                 <h3 class="text-lg font-medium text-gray-900">
-                    {{ $isFaculty ? __('My Skills') : __('Faculty Skills') }}
+                    {{ __('My Skills') }}
                 </h3>
-                @if ($canManage)
-                    <div class="mt-4 divide-y divide-gray-200">
+                <ul class="mt-4 flex flex-wrap gap-2">
                     @forelse ($entries as $entry)
-                        <article class="flex flex-wrap items-center justify-between gap-4 py-4">
-                            <div class="min-w-0">
-                                <h4 class="font-medium text-gray-900 break-words">
-                                    {{ $entry->expertise_area }}
-                                </h4>
-                            </div>
-
-                            @if ($canManage)
-                                <div class="flex flex-wrap items-center gap-4">
-                                    <a
-                                        href="{{ route($routePrefix.'edit', $routeParameters + ['expertise' => $entry]) }}"
-                                        class="text-sm text-indigo-600 underline"
-                                        aria-label="{{ __('Edit :area', ['area' => $entry->expertise_area]) }}"
-                                    >
-                                        {{ __('Edit') }}
-                                    </a>
-
-                                    <details class="text-sm">
-                                        <summary class="cursor-pointer text-red-700 underline">
-                                            {{ __('Remove :area', ['area' => $entry->expertise_area]) }}
-                                        </summary>
-
-                                        <form
-                                            method="POST"
-                                            action="{{ route($routePrefix.'destroy', $routeParameters + ['expertise' => $entry]) }}"
-                                            class="mt-3"
-                                        >
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <p class="mb-2 text-gray-600">
-                                                {{ __('Remove this faculty skill?') }}
-                                            </p>
-
-                                            <x-danger-button>
-                                                {{ __('Confirm removal') }}
-                                            </x-danger-button>
-                                        </form>
-                                    </details>
-                                </div>
-                            @endif
-                        </article>
+                        <li class="concept-chip">{{ $entry->expertise_area }}</li>
                     @empty
-                        <x-empty-state :title="__('No faculty skills registered.')" />
+                        <li class="text-sm text-gray-600">{{ __('No faculty skills selected yet.') }}</li>
                     @endforelse
-                    </div>
-                @else
-                    <ul class="mt-4 flex flex-wrap gap-2">
-                        @forelse ($entries as $entry)
-                            <li class="concept-chip">{{ $entry->expertise_area }}</li>
-                        @empty
-                            <li class="text-sm text-gray-600">{{ __('No faculty skills selected yet.') }}</li>
-                        @endforelse
-                    </ul>
-                @endif
+                </ul>
             </section>
-
-            @if ($canManage)
-                <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                    <div class="max-w-xl">
-                        <h3 class="text-lg font-medium text-gray-900">
-                            {{ __('Add Faculty Skill') }}
-                        </h3>
-
-                        <p class="mt-1 text-sm text-gray-600">
-                            {{ __('Add each faculty skill category once.') }}
-                        </p>
-
-                        <form
-                            method="POST"
-                            action="{{ route($routePrefix.'store', $routeParameters) }}"
-                            class="mt-6 space-y-6"
-                        >
-                            @csrf
-
-                            @include('faculty.expertise.form', ['expertise' => null])
-
-                            <x-primary-button>
-                                {{ __('Add Faculty Skill') }}
-                            </x-primary-button>
-                        </form>
-                    </div>
-                </section>
-            @endif
 
         </div>
     </div>

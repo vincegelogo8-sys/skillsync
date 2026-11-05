@@ -10,14 +10,6 @@ use Illuminate\View\View;
 
 class FacultyExpertiseController extends Controller
 {
-    public function facultyList(): View
-    {
-        return view('admin.expertise.index', [
-            'faculty' => User::where('role', User::ROLE_FACULTY)
-                ->with('facultyProfile')->orderBy('name')->orderBy('id')->paginate(20),
-        ]);
-    }
-
     public function index(FacultyExpertiseRequest $request): View|RedirectResponse
     {
         if (! $request->profile()) {
@@ -72,16 +64,15 @@ class FacultyExpertiseController extends Controller
 
     private function viewData(FacultyExpertiseRequest $request): array
     {
-        $admin = $request->user()->role === User::ROLE_ADMIN;
+        $isFaculty = $request->user()?->role === User::ROLE_FACULTY;
 
         return [
             'profile' => $request->profile(),
-            'canManage' => $admin,
-            'canUpdateSkills' => ! $admin && $request->user()->role === User::ROLE_FACULTY,
-            'isFaculty' => ! $admin && $request->user()->role === User::ROLE_FACULTY,
+            'canUpdateSkills' => $isFaculty,
+            'isFaculty' => $isFaculty,
             'areas' => config('expertise.areas'),
-            'routePrefix' => $admin ? 'admin.expertise.' : 'faculty.expertise.',
-            'routeParameters' => $admin ? ['facultyProfile' => $request->profile()] : [],
+            'routePrefix' => 'faculty.expertise.',
+            'routeParameters' => [],
         ];
     }
 

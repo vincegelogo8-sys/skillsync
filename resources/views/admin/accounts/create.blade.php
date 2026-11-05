@@ -14,6 +14,7 @@
                     @php
                         $name = old('name');
                         $email = old('email');
+                        $selectedRole = old('role');
                     @endphp
                     <form method="POST" action="{{ route('admin.accounts.store') }}" class="mt-6 space-y-6">
                         @csrf
@@ -31,13 +32,57 @@
                         </div>
                         <div>
                             <x-input-label for="role" :value="__('Account Type')" />
-                            <select id="role" name="role" required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                            <select id="role" name="role" required data-account-role-select class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="">{{ __('Select account type') }}</option>
                                 @foreach ([\App\Models\User::ROLE_STUDENT, \App\Models\User::ROLE_FACULTY] as $role)
-                                    <option value="{{ $role }}" @selected(old('role') === $role)>{{ __(ucfirst($role)) }}</option>
+                                    <option value="{{ $role }}" @selected($selectedRole === $role)>{{ __(ucfirst($role)) }}</option>
                                 @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('role')" class="mt-2" />
+                        </div>
+                        <div data-account-role-group="student" @if ($selectedRole !== 'student') hidden @endif class="space-y-6">
+                            <div>
+                                <x-input-label for="student_number" :value="__('Student Number')" />
+                                <x-text-input id="student_number" name="student_number" type="text" class="mt-1 block w-full" maxlength="50"
+                                    :value="old('student_number')" @if ($selectedRole === 'student') required @endif data-role-required />
+                                <x-input-error :messages="$errors->get('student_number')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="course" :value="__('Course')" />
+                                <select id="course" name="course" @if ($selectedRole === 'student') required @endif data-role-required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">{{ __('Select course') }}</option>
+                                    @foreach (config('student_options.courses') as $course)
+                                        <option value="{{ $course }}" @selected(old('course') === $course)>{{ $course }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('course')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="year_level" :value="__('Year Level')" />
+                                <select id="year_level" name="year_level" @if ($selectedRole === 'student') required @endif data-role-required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">{{ __('Select year level') }}</option>
+                                    @foreach (config('student_options.year_levels') as $year => $label)
+                                        <option value="{{ $year }}" @selected((string) old('year_level') === (string) $year)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('year_level')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="section" :value="__('Section')" />
+                                <select id="section" name="section" @if ($selectedRole === 'student') required @endif data-role-required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">{{ __('Select section') }}</option>
+                                    @foreach (config('student_options.sections') as $option)
+                                        <option value="{{ $option }}" @selected(old('section') === $option)>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('section')" class="mt-2" />
+                            </div>
+                        </div>
+                        <div data-account-role-group="faculty" @if ($selectedRole !== 'faculty') hidden @endif>
+                            <x-input-label for="department" :value="__('Department')" />
+                            <x-text-input id="department" name="department" type="text" class="mt-1 block w-full" maxlength="150"
+                                :value="old('department')" @if ($selectedRole === 'faculty') required @endif data-role-required />
+                            <x-input-error :messages="$errors->get('department')" class="mt-2" />
                         </div>
                         <div>
                             <x-input-label for="password" :value="__('Initial Password')" />

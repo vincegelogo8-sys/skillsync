@@ -36,6 +36,52 @@
                             <p id="account_type" class="mt-1 text-sm text-gray-700">{{ __(ucfirst($account->role)) }}</p>
                         </div>
 
+                        @if ($account->role === \App\Models\User::ROLE_STUDENT)
+                            <div>
+                                <x-input-label for="student_number" :value="__('Student Number')" />
+                                <x-text-input id="student_number" name="student_number" type="text" class="mt-1 block w-full" required maxlength="50"
+                                    :value="old('student_number', $account->studentProfile?->student_number)" />
+                                <x-input-error :messages="$errors->get('student_number')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="course" :value="__('Course')" />
+                                <select id="course" name="course" required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">{{ __('Select course') }}</option>
+                                    @foreach (config('student_options.courses') as $course)
+                                        <option value="{{ $course }}" @selected(old('course', $account->studentProfile?->course) === $course)>{{ $course }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('course')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="year_level" :value="__('Year Level')" />
+                                <select id="year_level" name="year_level" required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">{{ __('Select year level') }}</option>
+                                    @foreach (config('student_options.year_levels') as $year => $label)
+                                        <option value="{{ $year }}" @selected((string) old('year_level', $account->studentProfile?->year_level) === (string) $year)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('year_level')" class="mt-2" />
+                            </div>
+                            <div>
+                                <x-input-label for="section" :value="__('Section')" />
+                                <select id="section" name="section" required class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">{{ __('Select section') }}</option>
+                                    @foreach (config('student_options.sections') as $option)
+                                        <option value="{{ $option }}" @selected(old('section', $account->studentProfile?->section) === $option)>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error :messages="$errors->get('section')" class="mt-2" />
+                            </div>
+                        @else
+                            <div>
+                                <x-input-label for="department" :value="__('Department')" />
+                                <x-text-input id="department" name="department" type="text" class="mt-1 block w-full" required maxlength="150"
+                                    :value="old('department', $account->facultyProfile?->department)" />
+                                <x-input-error :messages="$errors->get('department')" class="mt-2" />
+                            </div>
+                        @endif
+
                         <div>
                             <x-input-label for="password" :value="__('New Password (optional)')" />
                             <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" minlength="8" autocomplete="new-password" />

@@ -37,9 +37,14 @@
 
                         <div>
                             <x-input-label for="course" :value="__('Course')" />
-                            <x-text-input id="course" name="course" type="text" class="mt-1 block w-full"
-                                :value="old('course', $profile?->course)" maxlength="150" required
-                                aria-describedby="course_error" :aria-invalid="$errors->has('course') ? 'true' : 'false'" />
+                            <select id="course" name="course" required aria-describedby="course_error"
+                                aria-invalid="{{ $errors->has('course') ? 'true' : 'false' }}"
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <option value="">{{ __('Select course') }}</option>
+                                @foreach (config('student_options.courses') as $course)
+                                    <option value="{{ $course }}" @selected(old('course', $profile?->course) === $course)>{{ $course }}</option>
+                                @endforeach
+                            </select>
                             <x-input-error id="course_error" :messages="$errors->get('course')" class="mt-2" />
                         </div>
 
@@ -49,9 +54,9 @@
                                 aria-invalid="{{ $errors->has('year_level') ? 'true' : 'false' }}"
                                 class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                                 <option value="">{{ __('Select year level') }}</option>
-                                @foreach (range(1, 6) as $year)
+                                @foreach (config('student_options.year_levels') as $year => $label)
                                     <option value="{{ $year }}" @selected((string) old('year_level', $profile?->year_level) === (string) $year)>
-                                        {{ __('Year') }} {{ $year }}
+                                        {{ $label }}
                                     </option>
                                 @endforeach
                             </select>
@@ -60,9 +65,14 @@
 
                         <div>
                             <x-input-label for="section" :value="__('Section')" />
-                            <x-text-input id="section" name="section" type="text" class="mt-1 block w-full"
-                                :value="old('section', $profile?->section)" maxlength="50" required
-                                aria-describedby="section_error" :aria-invalid="$errors->has('section') ? 'true' : 'false'" />
+                            <select id="section" name="section" required aria-describedby="section_error"
+                                aria-invalid="{{ $errors->has('section') ? 'true' : 'false' }}"
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <option value="">{{ __('Select section') }}</option>
+                                @foreach (config('student_options.sections') as $section)
+                                    <option value="{{ $section }}" @selected(old('section', $profile?->section) === $section)>{{ $section }}</option>
+                                @endforeach
+                            </select>
                             <x-input-error id="section_error" :messages="$errors->get('section')" class="mt-2" />
                         </div>
 
