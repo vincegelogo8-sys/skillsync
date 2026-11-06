@@ -43,8 +43,9 @@
                         <div data-account-role-group="student" @if ($selectedRole !== 'student') hidden @endif class="space-y-6">
                             <div>
                                 <x-input-label for="student_number" :value="__('Student Number')" />
+                                {{-- FIX: bound :required instead of @if inside the component tag --}}
                                 <x-text-input id="student_number" name="student_number" type="text" class="mt-1 block w-full" maxlength="50"
-                                    :value="old('student_number')" @if ($selectedRole === 'student') required @endif data-role-required />
+                                    :value="old('student_number')" :required="$selectedRole === 'student'" data-role-required />
                                 <x-input-error :messages="$errors->get('student_number')" class="mt-2" />
                             </div>
                             <div>
@@ -80,8 +81,9 @@
                         </div>
                         <div data-account-role-group="faculty" @if ($selectedRole !== 'faculty') hidden @endif>
                             <x-input-label for="department" :value="__('Department')" />
+                            {{-- FIX: bound :required instead of @if inside the component tag --}}
                             <x-text-input id="department" name="department" type="text" class="mt-1 block w-full" maxlength="150"
-                                :value="old('department')" @if ($selectedRole === 'faculty') required @endif data-role-required />
+                                :value="old('department')" :required="$selectedRole === 'faculty'" data-role-required />
                             <x-input-error :messages="$errors->get('department')" class="mt-2" />
                         </div>
                         <div>
