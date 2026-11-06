@@ -64,7 +64,7 @@ class AuthenticationTest extends TestCase
         $this->actingAs(User::factory()->unverified()->create())
             ->get('/dashboard')->assertRedirect(route('student.dashboard'));
 
-        $this->get('/student/dashboard')->assertOk()->assertSee('Student Dashboard')->assertSee('Your Workspace');
+        $this->get('/student/dashboard')->assertOk()->assertSee('Student Dashboard')->assertDontSee('Your Workspace');
     }
 
     public function test_login_is_throttled_after_five_failed_attempts(): void

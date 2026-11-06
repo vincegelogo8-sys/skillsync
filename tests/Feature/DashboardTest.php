@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Services\AdviserAssignmentService;
 use App\Services\ProposalAnalysisService;
 use App\Services\RecommendationService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -16,6 +18,12 @@ use Tests\TestCase;
 class DashboardTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     private function activity(string $title): array
     {
@@ -42,6 +50,7 @@ class DashboardTest extends TestCase
         $this->mock(AdviserAssignmentService::class)->shouldNotReceive('approve');
         $response = $this->actingAs($student)->get('/student/dashboard');
         $response->assertOk()->assertSee('Owned Proposal')->assertDontSee('Private Other Proposal')->assertDontSee($proposal->file_path)
+            ->assertSee('View all requests')->assertSee('View all proposals')
             ->assertViewHas('metrics', fn ($metrics) => array_column($metrics, 'value', 'label') === ['Research Proposals' => 1, 'Pending Requests' => 1, 'Active Assignments' => 1, 'Awaiting Analysis' => 1]);
         $this->get('/student/dashboard')->assertOk();
         $this->assertDatabaseCount('research_proposals', 2);
@@ -57,6 +66,7 @@ class DashboardTest extends TestCase
         $this->activity('Assigned Elsewhere');
         $profile = $faculty->facultyProfile;
         $this->actingAs($faculty)->get('/faculty/dashboard')->assertOk()->assertSee('Assigned To Me')->assertSee($student->name)->assertDontSee('Assigned Elsewhere')->assertSee('1 / 5')->assertDontSee('Latest Completed Assessment')
+            ->assertSee('View all requests')->assertSee('View all assignments')
             ->assertDontSee(route('admin.advisory-limits.index'))->assertViewHas('metrics', fn ($metrics) => array_column($metrics, 'value', 'label')['Active Assignments'] === 1);
     }
 
@@ -67,11 +77,12 @@ class DashboardTest extends TestCase
         User::where('role', User::ROLE_STUDENT)->orderBy('id')->first()->forceFill(['deactivated_at' => now()])->save();
         User::where('role', User::ROLE_FACULTY)->orderBy('id')->first()->forceFill(['deactivated_at' => now()])->save();
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
-        $this->actingAs($admin)->get('/admin/dashboard')->assertOk()->assertSee('First Proposal')->assertSee('Second Proposal')->assertSee('Management')
+        $response = $this->actingAs($admin)->get('/admin/dashboard')->assertOk()->assertSee('First Proposal')->assertSee('Second Proposal')
             ->assertSee('1 active')->assertSee('1 deactivated')
             ->assertViewHas('metrics', fn ($metrics) => array_column($metrics, 'value', 'label') === ['Research Proposals' => 2, 'Pending Requests' => 2, 'Active Assignments' => 2, 'Awaiting Analysis' => 2, 'Proposals without an adviser' => 0, 'Student Accounts' => '1 active', 'Faculty Accounts' => '1 active']
                 && array_column($metrics, 'secondary', 'label')['Student Accounts'] === '1 deactivated'
                 && array_column($metrics, 'secondary', 'label')['Faculty Accounts'] === '1 deactivated');
+        $this->assertNoDashboardQuickSections($response->getContent());
     }
 
     public static function profileRoles(): array
@@ -84,7 +95,10 @@ class DashboardTest extends TestCase
     {
         $this->activity('Other Private Activity');
         $user = User::factory()->create(['role' => $role]);
-        $this->actingAs($user)->get('/'.$role.'/dashboard')->assertOk()->assertSee('Complete Profile')->assertDontSee('Other Private Activity')->assertViewHas('profileReady', false);
+        $response = $this->actingAs($user)->get('/'.$role.'/dashboard')->assertOk()->assertSee('Complete Profile')->assertDontSee('Other Private Activity')->assertViewHas('profileReady', false);
+        $response->assertSee('View all requests')
+            ->assertSee($role === 'faculty' ? 'View all assignments' : 'View all proposals');
+        $this->assertNoDashboardQuickSections($response->getContent());
         $this->assertDatabaseCount('faculty_profiles', 1);
         $this->assertDatabaseCount('student_profiles', 1);
     }
@@ -108,12 +122,101 @@ class DashboardTest extends TestCase
 
     public function test_recent_activity_is_limited_and_names_are_escaped(): void
     {
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 12; $i++) {
             $this->activity('Proposal '.$i);
         }
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN, 'name' => '<script>alert(1)</script>']);
         $this->actingAs($admin)->get('/admin/dashboard')->assertOk()->assertSee('<script>alert(1)</script>')->assertDontSee('<script>alert(1)</script>', false)
-            ->assertViewHas('recentProposals', fn ($proposals) => $proposals->count() === 5 && $proposals->first()->title === 'Proposal 5')
-            ->assertViewHas('recentRequests', fn ($requests) => $requests->count() === 5);
+            ->assertViewHas('recentProposalGroups', function (array $groups): bool {
+                $proposals = collect($groups)->flatMap(fn (array $group) => $group['items'])->pluck('model');
+
+                return $proposals->count() === 10
+                    && $proposals->first()->title === 'Proposal 11'
+                    && $proposals->last()->title === 'Proposal 2';
+            })
+            ->assertViewHas('recentRequestGroups', fn (array $groups): bool => collect($groups)->sum(fn (array $group) => count($group['items'])) === 10);
+    }
+
+    public function test_activity_uses_manila_day_boundary_latest_request_time_and_hides_old_items(): void
+    {
+        config(['app.display_timezone' => 'Asia/Manila']);
+        Carbon::setTestNow(Carbon::parse('2026-11-06 17:30:00', 'UTC'));
+
+        [, , $proposalYesterday] = $this->activity('Yesterday Proposal');
+        [, , $proposalToday] = $this->activity('Today Proposal');
+        [, , $oldProposal] = $this->activity('Old Proposal');
+
+        DB::table('research_proposals')->where('id', $proposalYesterday->id)->update(['created_at' => '2026-11-06 15:00:00']);
+        DB::table('research_proposals')->where('id', $proposalToday->id)->update(['created_at' => '2026-11-06 16:30:00']);
+        DB::table('research_proposals')->where('id', $oldProposal->id)->update(['created_at' => '2026-10-30 15:00:00']);
+
+        $declined = AdviserRequest::where('research_proposal_id', $proposalToday->id)->firstOrFail();
+        DB::table('adviser_requests')->where('id', $declined->id)->update([
+            'status' => 'declined',
+            'requested_at' => '2026-11-03 15:00:00',
+            'responded_at' => '2026-11-06 16:30:00',
+            'updated_at' => '2026-11-06 16:30:00',
+        ]);
+        DB::table('adviser_requests')->where('research_proposal_id', $proposalYesterday->id)->update([
+            'requested_at' => '2026-11-06 15:00:00',
+            'responded_at' => null,
+            'updated_at' => '2026-11-06 15:00:00',
+        ]);
+
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $response = $this->actingAs($admin)->get('/admin/dashboard')->assertOk();
+        $requestGroups = $response->viewData('recentRequestGroups');
+        $proposalGroups = $response->viewData('recentProposalGroups');
+        $proposalTitles = collect($proposalGroups)->flatMap(fn (array $group) => $group['items'])->pluck('model.title');
+        $this->assertNotContains('Old Proposal', $proposalTitles);
+        $this->assertSame(['Today', 'Yesterday'], array_column($requestGroups, 'label'));
+        $todayRequests = collect($requestGroups[0]['items']);
+        $declinedRequest = $todayRequests->first(fn (array $item): bool => $item['model']->status === 'declined');
+        $this->assertNotNull($declinedRequest);
+        $this->assertSame('2026-11-07 00:30:00', $declinedRequest['at']->format('Y-m-d H:i:s'));
+        $response->assertSee('Today')->assertSee('Yesterday')
+            ->assertSee('12:30 AM')->assertSee('11:00 PM')
+            ->assertSee('Declined')
+            ->assertSee('Uploaded by '.$proposalToday->studentProfile->user->name);
+        $this->assertSame('UTC', config('app.timezone'));
+        $this->assertSame('2026-11-03 15:00:00', DB::table('adviser_requests')->where('id', $declined->id)->value('requested_at'));
+
+    }
+
+    public function test_dashboard_empty_states_and_sidebar_navigation_remain_while_duplicate_cards_are_gone(): void
+    {
+        foreach (User::ROLES as $role) {
+            $user = User::factory()->create(['role' => $role]);
+            if ($role === User::ROLE_STUDENT) {
+                $user->studentProfile()->create(['student_number' => 'EMPTY-'.$user->id, 'course' => 'BSIT', 'year_level' => 3, 'section' => 'A']);
+            } elseif ($role === User::ROLE_FACULTY) {
+                $user->facultyProfile()->create(['department' => 'Computing']);
+            }
+
+            $response = $this->actingAs($user)->get('/'.$role.'/dashboard')->assertOk()
+                ->assertSee('Recent Requests')->assertSee('View all requests')
+                ->assertSee('No adviser requests in the last 7 days.')
+                ->assertSee($role === 'faculty' ? 'No adviser assignments in the last 7 days.' : 'No proposals in the last 7 days.')
+                ->assertSee($role === 'faculty' ? 'View all assignments' : 'View all proposals');
+            $response->assertSee('id="workspace-sidebar"', false);
+            foreach ([...config('workspace_navigation.'.$role.'.primary'), ...config('workspace_navigation.'.$role.'.secondary')] as $link) {
+                $response->assertSee($link['label']);
+            }
+            $this->assertNoDashboardQuickSections($response->getContent());
+        }
+    }
+
+    private function assertNoDashboardQuickSections(string $html): void
+    {
+        $document = new \DOMDocument;
+        @$document->loadHTML($html);
+        $xpath = new \DOMXPath($document);
+        foreach (['Your Workspace', 'Management', 'Profile', 'Profile & Skills'] as $heading) {
+            $this->assertSame(
+                0,
+                $xpath->query('//main//*[self::h2 or self::h3 or self::h4][normalize-space(.)="'.$heading.'"]')->length,
+                $heading.' quick-link section should not render in the dashboard main content.'
+            );
+        }
     }
 }

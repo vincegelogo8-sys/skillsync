@@ -6,6 +6,8 @@ use App\Models\AdviserAssignment;
 use App\Models\AdviserRequest;
 use App\Models\ResearchProposal;
 use App\Models\User;
+use App\Support\ActivityGroups;
+use Carbon\Carbon;
 
 class DashboardSummaryService
 {
@@ -62,12 +64,36 @@ class DashboardSummaryService
             }
         }
 
+        $windowStartUtc = Carbon::now(config('app.display_timezone', 'Asia/Manila'))
+            ->startOfDay()
+            ->subDays(6)
+            ->utc();
+        $recentRequests = (clone $requests)
+            ->where(function ($query) use ($windowStartUtc): void {
+                $query->where('requested_at', '>=', $windowStartUtc)
+                    ->orWhere('responded_at', '>=', $windowStartUtc)
+                    ->orWhere('updated_at', '>=', $windowStartUtc);
+            })
+            ->with(['researchProposal', 'facultyProfile.user', 'studentProfile.user'])
+            ->latest('id')
+            ->get();
+        $recentProposals = $role === User::ROLE_FACULTY
+            ? collect()
+            : (clone $proposals)->where('created_at', '>=', $windowStartUtc)->with('studentProfile.user')->latest('created_at')->latest('id')->get();
+        $recentAssignments = $role === User::ROLE_FACULTY
+            ? (clone $assignments)->where('assigned_at', '>=', $windowStartUtc)->with('researchProposal.studentProfile.user')->latest('assigned_at')->latest('id')->get()
+            : collect();
+
         return [
             'role' => $role, 'roleLabel' => ucfirst($role), 'profileReady' => $role === User::ROLE_ADMIN || $profile !== null,
             'metrics' => $metrics,
-            'recentRequests' => (clone $requests)->with(['researchProposal', 'facultyProfile.user', 'studentProfile.user'])->latest('id')->limit(5)->get(),
-            'recentProposals' => $role === User::ROLE_FACULTY ? collect() : (clone $proposals)->latest('id')->limit(5)->get(),
-            'recentAssignments' => $role === User::ROLE_FACULTY ? (clone $assignments)->with('researchProposal.studentProfile.user')->latest('assigned_at')->latest('id')->limit(5)->get() : collect(),
+            'recentRequestGroups' => ActivityGroups::make($recentRequests, function (AdviserRequest $request) {
+                $timestamps = collect([$request->requested_at, $request->responded_at])->filter();
+
+                return $timestamps->sortBy(fn (Carbon $at): int => $at->getTimestamp())->last() ?? $request->updated_at;
+            }),
+            'recentProposalGroups' => ActivityGroups::make($recentProposals, fn (ResearchProposal $proposal) => $proposal->created_at),
+            'recentAssignmentGroups' => ActivityGroups::make($recentAssignments, fn (AdviserAssignment $assignment) => $assignment->assigned_at),
         ];
     }
 }

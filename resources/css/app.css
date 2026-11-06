@@ -250,6 +250,10 @@ dialog[open] { animation: fadeIn .2s ease; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+@media print {
+    .proposal-reader-print-content, .proposal-reader-watermark { display: none !important; }
+    .proposal-print-notice { display: block !important; padding: 2rem; color: #111827; font-size: 1.25rem; }
+}
 
 /* Shared presentation primitives for every role and existing Blade form. */
 .workspace-page-header { margin-bottom: 28px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
@@ -305,6 +309,10 @@ dialog[open] { animation: fadeIn .2s ease; }
 .adviser-load { flex: 0 0 auto; white-space: nowrap; color: var(--text-secondary); }
 .adviser-chevron { flex: 0 0 auto; transition: transform .18s ease; }
 .adviser-group[open] > .adviser-summary .adviser-chevron { transform: rotate(90deg); }
+.proposal-reader-text { white-space: pre-wrap; overflow-wrap: anywhere; user-select: none; -webkit-user-select: none; }
+.proposal-reader-watermark { position: absolute; inset: -20%; z-index: 2; display: flex; flex-wrap: wrap; align-content: space-around; justify-content: space-around; gap: 3rem 2rem; overflow: hidden; transform: rotate(-24deg); opacity: .08; pointer-events: none; }
+.proposal-reader-watermark span { color: #334155; font-size: 1.15rem; font-weight: 700; white-space: nowrap; }
+.proposal-print-notice { display: none; }
 .page-content td[colspan] { padding: 28px 16px; text-align: center; color: var(--text-secondary); background: #fafbfe; }
 .page-content .divide-y > article { padding: 22px 0; }
 .page-content .divide-y > article:first-child { padding-top: 12px; }

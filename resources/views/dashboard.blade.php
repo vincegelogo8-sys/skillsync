@@ -28,43 +28,81 @@
             <section class="rounded-lg bg-white p-6 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-lg font-semibold text-gray-900">{{ __('Recent Requests') }}</h3><a href="{{ route($role.'.requests.index') }}" class="text-sm text-indigo-600 underline">{{ __('View all requests') }}</a></div>
                 <ul class="mt-4 divide-y divide-gray-100">
-                    @forelse ($recentRequests as $entry)
-                        <li class="py-3"><p class="font-medium text-gray-900 break-words">{{ $entry->researchProposal->title }}</p><p class="mt-1 text-sm text-gray-600">{{ $role === 'student' ? $entry->facultyProfile->user->name : $entry->studentProfile->user->name }} · <x-status-badge :status="$entry->status" /></p></li>
+                    @forelse ($recentRequestGroups as $group)
+                        <li class="py-3">
+                            <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __($group['label']) }}</h4>
+                            <ul class="divide-y divide-gray-100">
+                                @foreach ($group['items'] as $item)
+                                    @php($entry = $item['model'])
+                                    <li class="py-3">
+                                        <p class="font-medium text-gray-900 break-words">{{ $entry->researchProposal->title }}</p>
+                                        <p class="mt-1 text-sm text-gray-600">
+                                            {{ $role === 'student' ? $entry->facultyProfile->user->name : $entry->studentProfile->user->name }}
+                                            · <x-status-badge :status="$entry->status" />
+                                            · <time datetime="{{ $item['at']->toIso8601String() }}" title="{{ $item['at']->format('F j, Y g:i A T') }}">{{ $item['at']->format('g:i A') }}</time>
+                                        </p>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </li>
                     @empty
-                        <li class="py-3"><x-empty-state title="{{ __('No adviser requests.') }}" /></li>
+                        <li class="py-3"><x-empty-state title="{{ __('No adviser requests in the last 7 days.') }}" /></li>
                     @endforelse
                 </ul>
             </section>
             <section class="rounded-lg bg-white p-6 shadow-sm">
-                <h3 class="text-lg font-semibold text-gray-900">{{ $role === 'faculty' ? __('Recent Assignments') : __('Recent Proposals') }}</h3>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ $role === 'faculty' ? __('Recent Assignments') : __('Recent Proposals') }}</h3>
+                    <a href="{{ route($role.'.'.($role === 'faculty' ? 'assignments' : 'proposals').'.index') }}" class="text-sm text-indigo-600 underline">{{ $role === 'faculty' ? __('View all assignments') : __('View all proposals') }}</a>
+                </div>
                 <ul class="mt-4 divide-y divide-gray-100">
                     @if ($role === 'faculty')
-                        @forelse ($recentAssignments as $entry)
-                            <li class="py-3"><a href="{{ route('faculty.assignments.index') }}" class="font-medium text-indigo-600 underline break-words">{{ $entry->researchProposal->title }}</a><p class="mt-1 text-sm text-gray-600">{{ $entry->researchProposal->studentProfile->user->name }} · {{ ucfirst($entry->status) }}</p></li>
+                        @forelse ($recentAssignmentGroups as $group)
+                            <li class="py-3">
+                                <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __($group['label']) }}</h4>
+                                <ul class="divide-y divide-gray-100">
+                                    @foreach ($group['items'] as $item)
+                                        @php($entry = $item['model'])
+                                        <li class="py-3">
+                                            <a href="{{ route('faculty.assignments.index') }}" class="font-medium text-indigo-600 underline break-words">{{ $entry->researchProposal->title }}</a>
+                                            <p class="mt-1 text-sm text-gray-600">
+                                                {{ $entry->researchProposal->studentProfile->user->name }} · {{ ucfirst($entry->status) }}
+                                                · <time datetime="{{ $item['at']->toIso8601String() }}" title="{{ $item['at']->format('F j, Y g:i A T') }}">{{ $item['at']->format('g:i A') }}</time>
+                                            </p>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </li>
                         @empty
-                            <li class="py-3"><x-empty-state title="{{ __('No adviser assignments.') }}" /></li>
+                            <li class="py-3"><x-empty-state title="{{ __('No adviser assignments in the last 7 days.') }}" /></li>
                         @endforelse
                     @else
-                        @forelse ($recentProposals as $entry)
-                            <li class="py-3"><a href="{{ route($role.'.proposals.show', $entry) }}" class="font-medium text-indigo-600 underline break-words">{{ $entry->title }}</a><p class="mt-1 text-sm text-gray-600">{{ __('Uploaded') }} {{ $entry->created_at->format('Y-m-d') }}</p></li>
+                        @forelse ($recentProposalGroups as $group)
+                            <li class="py-3">
+                                <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{ __($group['label']) }}</h4>
+                                <ul class="divide-y divide-gray-100">
+                                    @foreach ($group['items'] as $item)
+                                        @php($entry = $item['model'])
+                                        <li class="py-3">
+                                            <a href="{{ route($role.'.proposals.show', $entry) }}" class="font-medium text-indigo-600 underline break-words">{{ $entry->title }}</a>
+                                            <p class="mt-1 text-sm text-gray-600">
+                                                @if ($role === 'admin')
+                                                    {{ __('Uploaded by :name', ['name' => $entry->studentProfile->user->name]) }} ·
+                                                @else
+                                                    {{ __('Uploaded') }}
+                                                @endif
+                                                <time datetime="{{ $item['at']->toIso8601String() }}" title="{{ $item['at']->format('F j, Y g:i A T') }}">{{ $item['at']->format('g:i A') }}</time>
+                                            </p>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </li>
                         @empty
-                            <li class="py-3"><x-empty-state title="{{ __('No proposals uploaded.') }}" /></li>
+                            <li class="py-3"><x-empty-state title="{{ __('No proposals in the last 7 days.') }}" /></li>
                         @endforelse
                     @endif
                 </ul>
             </section>
         </div>
-        @foreach (['primary' => 'Your Workspace', 'secondary' => config('workspace_navigation.'.$role.'.secondary_label')] as $group => $heading)
-            <section>
-                <h3 class="mb-3 text-lg font-semibold text-gray-900">{{ __($heading) }}</h3>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach (config('workspace_navigation.'.$role.'.'.$group) as $link)
-                        <a href="{{ route($link['route']) }}" class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm hover:border-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600">
-                            <h4 class="font-semibold text-indigo-700">{{ __($link['label']) }}</h4>
-                        </a>
-                    @endforeach
-                </div>
-            </section>
-        @endforeach
     </div></div>
 </x-app-layout>

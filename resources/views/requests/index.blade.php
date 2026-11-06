@@ -33,7 +33,7 @@
                     @endif
                     <p class="mt-2 text-xs text-gray-600">{{ __('Requested') }} {{ $adviserRequest->requested_at->format('Y-m-d H:i T') }} @if ($adviserRequest->responded_at) · {{ __('Updated') }} {{ $adviserRequest->responded_at->format('Y-m-d H:i T') }} @endif</p>
                     <div class="mt-4 flex flex-wrap items-center gap-4">
-                        @if ($role === 'faculty')<a href="{{ route('adviser-requests.proposal', $adviserRequest) }}" target="_blank" rel="noopener" class="button button-secondary inline-flex items-center">{{ __('View Proposal') }}</a>@endif
+                        @if ($role === 'faculty')<a href="{{ route('adviser-requests.proposal', $adviserRequest) }}" class="button button-secondary inline-flex items-center">{{ __('View Proposal') }}</a>@endif
                         @if ($role === 'student')<a href="{{ route('student.recommendations.index', $adviserRequest->researchProposal) }}" class="text-sm text-indigo-600 underline">{{ __('View recommendations') }}</a>@endif
                         @if ($role === 'admin')<a href="{{ route('admin.proposals.show', $adviserRequest->researchProposal) }}" class="text-sm text-indigo-600 underline">{{ __('View proposal') }}</a>@endif
                         @if ($role === 'student' && $adviserRequest->status === 'cancelled')

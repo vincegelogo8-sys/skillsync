@@ -181,10 +181,19 @@ class AssignedListPagesTest extends TestCase
         $studentProfile = $student->studentProfile()->create(['student_number' => 'S-1', 'course' => 'BS Information Technology', 'year_level' => 3, 'section' => 'A']);
         $proposal = $studentProfile->researchProposals()->make();
         $proposal->forceFill(['title' => 'Document', 'file_path' => 'active.pdf', 'original_filename' => 'active.pdf', 'file_type' => 'pdf', 'status' => 'uploaded'])->save();
+        $proposal->analysis()->make()->forceFill([
+            'extracted_text' => 'Text available to the assigned adviser.',
+        ])->save();
         Storage::disk('proposals')->put('active.pdf', 'contents');
         $assignment = AdviserAssignment::forceCreate(['research_proposal_id' => $proposal->id, 'faculty_profile_id' => $owner->id, 'assigned_at' => now(), 'status' => 'active']);
 
-        $this->actingAs($owner->user)->get(route('faculty.assignments.proposal', $assignment))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $response = $this->actingAs($owner->user)->get(route('faculty.assignments.proposal', $assignment))
+            ->assertOk()->assertSee('Document')->assertSee($student->name)
+            ->assertSee('Text available to the assigned adviser.')
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+        $this->assertNull($response->headers->get('Content-Disposition'));
+        $response->assertDontSee('active.pdf')->assertDontSee('<iframe', false)->assertDontSee('<embed', false)->assertDontSee('<object', false);
         $this->actingAs($other->user)->get(route('faculty.assignments.proposal', $assignment))->assertNotFound();
         $this->actingAs($admin)->get(route('faculty.assignments.proposal', $assignment))->assertForbidden();
         $this->actingAs($student)->get(route('faculty.assignments.proposal', $assignment))->assertForbidden();

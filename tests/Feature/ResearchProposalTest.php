@@ -110,7 +110,7 @@ class ResearchProposalTest extends TestCase
     }
 
     #[DataProvider('validTypes')]
-    public function test_students_can_upload_list_view_and_download_valid_documents(string $type): void
+    public function test_students_can_upload_and_view_valid_documents_without_download_access(string $type): void
     {
         $student = $this->student();
         $file = $type === 'pdf' ? $this->pdf() : $this->docx();
@@ -127,12 +127,10 @@ class ResearchProposalTest extends TestCase
         $this->assertSame($contents, Storage::disk('proposals')->get($proposal->file_path));
         $this->assertArrayNotHasKey('file_path', $proposal->toArray());
         $this->get('/student/proposals/'.$proposal->id)->assertOk()->assertSee('Proposal uploaded successfully.')
-            ->assertSee('proposal.'.$type)->assertDontSee($proposal->file_path)->assertDontSee('storage/app/private');
+            ->assertSee('proposal.'.$type)->assertDontSee('Download Document')
+            ->assertDontSee($proposal->file_path)->assertDontSee('storage/app/private');
         $this->get('/student/proposals')->assertSee('Research Proposal Example')->assertDontSee($proposal->file_path);
-        $response = $this->get('/student/proposals/'.$proposal->id.'/download')->assertOk()->assertDownload('proposal.'.$type)
-            ->assertHeader('X-Content-Type-Options', 'nosniff');
-        $this->assertSame($contents, $response->streamedContent());
-        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->get('/student/proposals/'.$proposal->id.'/download')->assertNotFound();
         $this->get('/storage/'.$proposal->file_path)->assertForbidden();
         $this->get('/proposals/'.$proposal->file_path)->assertNotFound();
     }
@@ -212,7 +210,7 @@ class ResearchProposalTest extends TestCase
         $this->assertSame(0, $other->studentProfile->researchProposals()->count());
     }
 
-    public function test_other_students_cannot_list_view_or_download_a_proposal(): void
+    public function test_other_students_cannot_list_or_view_a_proposal(): void
     {
         $proposal = $this->upload($this->student(), null, ['title' => 'Private research title']);
         $this->actingAs($this->student())->get('/student/proposals')->assertDontSee('Private research title');
@@ -226,10 +224,22 @@ class ResearchProposalTest extends TestCase
         $student = $this->student();
         $proposal = $this->upload($student);
         $this->upload($this->student(), null, ['title' => 'Second proposal']);
-        $this->actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]))->get('/admin/proposals')->assertOk()
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $this->actingAs($admin)->get('/admin/proposals')->assertOk()
             ->assertSee('Second proposal')->assertSee($student->name)->assertDontSee(route('student.proposals.create'));
-        $this->get('/admin/proposals/'.$proposal->id)->assertOk()->assertSee($student->studentProfile->student_number)->assertDontSee($proposal->file_path);
-        $this->get('/admin/proposals/'.$proposal->id.'/download')->assertDownload('proposal.pdf');
+        $this->get('/admin/proposals/'.$proposal->id)->assertOk()
+            ->assertSee($student->studentProfile->student_number)
+            ->assertSee('Download Document')
+            ->assertSee(route('admin.proposals.download', $proposal))
+            ->assertDontSee($proposal->file_path);
+        $download = $this->get('/admin/proposals/'.$proposal->id.'/download')->assertDownload('proposal.pdf');
+        $this->assertSame(Storage::disk('proposals')->get($proposal->file_path), $download->streamedContent());
+        $student->refresh();
+        $this->actingAs($student)->get('/admin/proposals/'.$proposal->id.'/download')->assertForbidden();
+        $faculty = User::factory()->create(['role' => User::ROLE_FACULTY]);
+        $faculty->facultyProfile()->create(['department' => 'Computing']);
+        $this->actingAs($faculty)->get('/admin/proposals/'.$proposal->id.'/download')->assertForbidden();
+        $this->actingAs($admin);
         $this->get('/admin/dashboard')->assertSee(route('admin.proposals.index'));
     }
 
@@ -238,7 +248,7 @@ class ResearchProposalTest extends TestCase
         $student = $this->student();
         $proposal = $this->upload($student);
         $this->app['auth']->forgetGuards();
-        $studentUrls = ['/student/proposals', '/student/proposals/create', '/student/proposals/'.$proposal->id, '/student/proposals/'.$proposal->id.'/download'];
+        $studentUrls = ['/student/proposals', '/student/proposals/create', '/student/proposals/'.$proposal->id];
         $adminUrls = ['/admin/proposals', '/admin/proposals/'.$proposal->id, '/admin/proposals/'.$proposal->id.'/download'];
         foreach (array_merge($studentUrls, $adminUrls) as $url) {
             $this->get($url)->assertRedirect('/login');
@@ -259,10 +269,9 @@ class ResearchProposalTest extends TestCase
         }
     }
 
-    public function test_missing_storage_file_returns_a_not_found_response(): void
+    public function test_student_download_route_does_not_exist_even_when_the_file_is_stored(): void
     {
         $proposal = $this->upload($this->student());
-        Storage::disk('proposals')->delete($proposal->file_path);
         $this->get('/student/proposals/'.$proposal->id.'/download')->assertNotFound()->assertDontSee($proposal->file_path);
     }
 

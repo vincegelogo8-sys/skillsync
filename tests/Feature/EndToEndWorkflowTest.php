@@ -91,7 +91,7 @@ class EndToEndWorkflowTest extends TestCase
         $this->assertNotNull($proposal->analysis->analyzed_at);
         $this->assertStringContainsString('Laravel', $proposal->analysis->extracted_text);
         Storage::disk('proposals')->assertExists($proposal->file_path);
-        $this->get('/student/proposals/'.$proposal->id.'/download')->assertOk();
+        $this->get('/student/proposals/'.$proposal->id.'/download')->assertNotFound();
         $recommendationsUrl = '/student/proposals/'.$proposal->id.'/recommendations';
         $this->send('post', $recommendationsUrl)->assertSessionHasNoErrors();
         $recommendations = $proposal->recommendations()->sole();

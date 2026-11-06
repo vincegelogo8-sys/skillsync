@@ -33,7 +33,7 @@ Route::get(
     '/adviser-requests/{adviserRequest}/proposal',
     [AdviserRequestController::class, 'viewProposal']
 )
-    ->middleware(['auth', 'active'])
+    ->middleware(['auth', 'active', 'role:faculty'])
     ->name('adviser-requests.proposal');
 
 Route::get(
@@ -134,12 +134,6 @@ Route::middleware([
             [ResearchProposalController::class, 'show']
         )
             ->name('proposals.show');
-
-        Route::get(
-            '/proposals/{proposal}/download',
-            [ResearchProposalController::class, 'download']
-        )
-            ->name('proposals.download');
 
         Route::post(
             '/proposals/{proposal}/extract',

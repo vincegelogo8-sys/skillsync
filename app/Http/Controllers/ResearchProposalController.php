@@ -423,6 +423,11 @@ class ResearchProposalController extends Controller
         Request $request,
         ResearchProposal $proposal
     ): StreamedResponse {
+        abort_unless(
+            $request->user()->role === User::ROLE_ADMIN,
+            403
+        );
+
         $this->authorizeAccess(
             $request,
             $proposal

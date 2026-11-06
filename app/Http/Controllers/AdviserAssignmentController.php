@@ -13,12 +13,11 @@ use App\Support\NameSortKey;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
@@ -161,12 +160,17 @@ class AdviserAssignmentController extends Controller
         );
 
         $proposal = $assignment->researchProposal;
-        abort_unless($proposal && $proposal->file_path && Storage::disk('proposals')->exists($proposal->file_path), 404);
-        $headers = ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store'];
+        abort_unless($proposal, 404);
 
-        return strtolower($proposal->file_type) === 'pdf'
-            ? Storage::disk('proposals')->response($proposal->file_path, $proposal->original_filename, ['Content-Type' => 'application/pdf', ...$headers], 'inline')
-            : Storage::disk('proposals')->download($proposal->file_path, $proposal->original_filename, ['Content-Type' => 'application/octet-stream', ...$headers]);
+        return response()->view('proposals.reader', [
+            'proposal' => $proposal->loadMissing(['studentProfile.user', 'analysis']),
+            'backUrl' => route('faculty.assignments.index'),
+            'watermarkName' => $request->user()->name,
+            'watermarkTime' => now()->format('Y-m-d H:i T'),
+        ])->withHeaders([
+            'Cache-Control' => 'private, no-store',
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ]);
     }
 
     private function filters(Request $request): array

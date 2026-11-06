@@ -10,10 +10,9 @@ use App\Services\AdviserRequestService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\View\View;
 
 class AdviserRequestController extends Controller
 {
@@ -76,39 +75,21 @@ class AdviserRequestController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role === User::ROLE_FACULTY) {
-            abort_unless(
-                $user->facultyProfile?->id === $adviserRequest->faculty_profile_id,
-                403
-            );
-        } elseif ($user->role === User::ROLE_STUDENT) {
-            abort_unless(
-                $user->studentProfile?->id === $adviserRequest->student_profile_id,
-                404
-            );
-        } elseif ($user->role !== User::ROLE_ADMIN) {
-            abort(403);
-        }
+        abort_unless($user->role === User::ROLE_FACULTY, 403);
+        abort_unless($user->facultyProfile?->id === $adviserRequest->faculty_profile_id, 403);
+        abort_unless(in_array($adviserRequest->status, AdviserRequest::ACTIVE_STATUSES, true), 404);
 
         $proposal = $adviserRequest->researchProposal;
         abort_unless($proposal, 404);
 
-        $disk = Storage::disk('proposals');
-        abort_unless(
-            $proposal->file_path && $disk->exists($proposal->file_path),
-            404,
-            'The proposal document is unavailable.'
-        );
-
-        $isPdf = strtolower($proposal->file_type) === 'pdf';
-        $headers = [
-            'Content-Type' => $isPdf ? 'application/pdf' : 'application/octet-stream',
-            'X-Content-Type-Options' => 'nosniff',
+        return response()->view('proposals.reader', [
+            'proposal' => $proposal->loadMissing(['studentProfile.user', 'analysis']),
+            'backUrl' => route('faculty.requests.index'),
+            'watermarkName' => $user->name,
+            'watermarkTime' => now()->format('Y-m-d H:i T'),
+        ])->withHeaders([
             'Cache-Control' => 'private, no-store',
-        ];
-
-        return $isPdf
-            ? $disk->response($proposal->file_path, $proposal->original_filename, $headers, 'inline')
-            : $disk->download($proposal->file_path, $proposal->original_filename, $headers);
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ]);
     }
 }

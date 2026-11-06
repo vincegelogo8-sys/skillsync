@@ -105,7 +105,7 @@ class ProposalExtractionTest extends TestCase
         $this->assertDatabaseCount('proposal_analyses', 0);
         $this->get($url)->assertOk()->assertSee($type === 'pdf' ? DocumentExtractionService::EMPTY_PDF : 'Unable to extract readable text from this DOCX file.')
             ->assertSee('Retry Text Extraction')->assertDontSee($proposal->file_path);
-        $this->get($url.'/download')->assertDownload('proposal.'.$type);
+        $this->get($url.'/download')->assertNotFound();
     }
 
     public function test_failed_extraction_can_be_retried_without_reuploading_and_error_is_cleared(): void

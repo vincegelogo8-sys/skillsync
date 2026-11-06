@@ -237,12 +237,14 @@
                 <h2 class="mt-8 text-lg font-semibold text-gray-900">{{ __('Actions') }}</h2>
                 <div class="mt-6 flex flex-wrap items-center gap-3">
 
-                    <a
-                        href="{{ route(($admin ? 'admin' : 'student').'.proposals.download', $proposal) }}"
-                        class="button button-secondary"
-                    >
-                        {{ __('Download Document') }}
-                    </a>
+                    @if ($admin)
+                        <a
+                            href="{{ route('admin.proposals.download', $proposal) }}"
+                            class="button button-secondary"
+                        >
+                            {{ __('Download Document') }}
+                        </a>
+                    @endif
 
                     {{-- REFRESH EXTRACTION --}}
                     <form

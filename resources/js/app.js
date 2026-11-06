@@ -97,6 +97,14 @@ document.querySelectorAll('[data-bulk-status-action]').forEach((button) => {
 });
 updateAccountSelection();
 
+['contextmenu', 'copy', 'cut', 'dragstart'].forEach((eventName) => {
+    document.addEventListener(eventName, (event) => {
+        if (event.target instanceof Element && event.target.closest('[data-no-copy]')) {
+            event.preventDefault();
+        }
+    }, true);
+});
+
 const adviserGroups = [...document.querySelectorAll('details.adviser-group')];
 const expandAdvisersButton = document.querySelector('[data-accordion-expand-all]');
 const collapseAdvisersButton = document.querySelector('[data-accordion-collapse-all]');
