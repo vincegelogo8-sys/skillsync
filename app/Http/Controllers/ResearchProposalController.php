@@ -4,14 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ResearchProposalRequest;
 use App\Models\ResearchProposal;
+use App\Models\FacultyProfile;
 use App\Models\User;
 use App\Services\ProposalAnalysisService;
 use App\Services\ProposalExtractionService;
 use App\Services\ResearchProposalService;
+use App\Support\CollectionPaginator;
+use App\Support\ListSorting;
+use App\Support\NameSortKey;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -20,7 +26,9 @@ use Throwable;
 class ResearchProposalController extends Controller
 {
     public function index(
-        Request $request
+        Request $request,
+        CollectionPaginator $paginator,
+        NameSortKey $nameSortKey
     ): View|RedirectResponse {
         $admin =
             $request->user()->role === User::ROLE_ADMIN;
@@ -32,17 +40,160 @@ class ResearchProposalController extends Controller
             return $this->completeProfile();
         }
 
-        $query = $admin
-            ? ResearchProposal::with('studentProfile.user')
-            : $request->user()
-                ->studentProfile
-                ->researchProposals();
+        if (! $admin) {
+            return view('student.proposal.index', [
+                'proposals' => $request->user()->studentProfile->researchProposals()->latest('id')->paginate(15),
+                'admin' => false,
+            ]);
+        }
+
+        $filters = $this->adminProposalFilters($request);
+        $sortOptions = [
+            'newest' => 'Newest',
+            'oldest' => 'Oldest',
+            'title' => 'Title (A-Z)',
+            'student' => 'Student',
+            'course' => 'Course',
+            'section' => 'Section',
+            'adviser' => 'Adviser',
+            'status' => 'Status',
+        ];
+        $sorting = ListSorting::parse($request, array_keys($sortOptions), 'newest', 'desc');
+        $query = $this->adminProposalQuery($filters)
+            ->with([
+                'studentProfile.user',
+                'assignment' => fn ($assignments) => $assignments->where('status', 'active'),
+                'assignment.facultyProfile.user',
+            ]);
+        $proposals = $query->get()->sort(function (ResearchProposal $left, ResearchProposal $right) use ($sorting, $nameSortKey): int {
+            $leftStudent = $left->studentProfile;
+            $rightStudent = $right->studentProfile;
+            $leftAdviser = $left->assignment?->facultyProfile?->user?->name;
+            $rightAdviser = $right->assignment?->facultyProfile?->user?->name;
+            if ($sorting['sort'] === 'adviser' && ($leftAdviser === null) !== ($rightAdviser === null)) {
+                return $leftAdviser === null ? 1 : -1;
+            }
+            $comparison = match ($sorting['sort']) {
+                'oldest' => $left->created_at <=> $right->created_at,
+                'title' => strcasecmp($left->title, $right->title),
+                'student' => strcmp($nameSortKey->key((string) $leftStudent?->user?->name), $nameSortKey->key((string) $rightStudent?->user?->name)),
+                'course' => strcasecmp((string) $leftStudent?->course, (string) $rightStudent?->course),
+                'section' => strcasecmp((string) $leftStudent?->section, (string) $rightStudent?->section),
+                'adviser' => strcmp($nameSortKey->key((string) $leftAdviser), $nameSortKey->key((string) $rightAdviser)),
+                'status' => strcasecmp($left->status, $right->status),
+                default => $right->created_at <=> $left->created_at,
+            };
+            if ($comparison !== 0 && $sorting['dir'] === 'desc' && $sorting['sort'] !== 'newest' && $sorting['sort'] !== 'oldest') {
+                $comparison *= -1;
+            }
+            if ($comparison !== 0) {
+                return $comparison;
+            }
+
+            return $sorting['sort'] === 'newest'
+                ? ($right->id <=> $left->id)
+                : ($left->id <=> $right->id);
+        })->values();
+
+        $baseFilters = [...$filters, 'course' => null, 'section' => null];
+        $courseCounts = $this->proposalOptionCounts($baseFilters, 'course');
+        $sectionCounts = $filters['course'] === null ? [] : $this->proposalOptionCounts($filters, 'section');
+        $faculty = FacultyProfile::whereHas('user', fn (Builder $users) => $users->where('role', User::ROLE_FACULTY))
+            ->with('user')->get()
+            ->sort(fn (FacultyProfile $left, FacultyProfile $right) => strcmp(
+                $nameSortKey->key((string) $left->user?->name),
+                $nameSortKey->key((string) $right->user?->name)
+            ) ?: ($left->id <=> $right->id))->values();
+        $queryParams = array_filter([
+            'course' => $filters['course'],
+            'section' => $filters['section'],
+            'adviser' => $filters['adviser'],
+            'sort' => $sorting['sort'],
+            'dir' => $sorting['dir'],
+        ], fn ($value) => $value !== null && $value !== '');
 
         return view('student.proposal.index', [
-            'proposals' => $query->latest('id')->paginate(15),
-
-            'admin' => $admin,
+            'proposals' => $paginator->paginate($proposals, $request),
+            'admin' => true,
+            'filters' => $filters,
+            'sorting' => $sorting,
+            'sortOptions' => $sortOptions,
+            'courseCounts' => $courseCounts,
+            'sectionCounts' => $sectionCounts,
+            'allCourseCount' => $this->adminProposalQuery($baseFilters)->count(),
+            'facultyOptions' => $faculty,
+            'queryParams' => $queryParams,
         ]);
+    }
+
+    private function adminProposalFilters(Request $request): array
+    {
+        $course = $this->validProposalQuery($request, 'course', ['in:'.implode(',', config('student_options.courses'))]);
+        $section = $this->validProposalQuery($request, 'section', ['in:'.implode(',', config('student_options.sections'))]);
+        $adviser = $request->query('adviser');
+        if ($adviser !== 'none') {
+            $adviser = is_string($adviser) && ctype_digit($adviser)
+                && FacultyProfile::whereKey((int) $adviser)->whereHas('user', fn (Builder $users) => $users->where('role', User::ROLE_FACULTY))->exists()
+                ? (string) (int) $adviser
+                : null;
+        }
+
+        return [
+            'course' => $course,
+            'section' => $course === null ? null : $section,
+            'adviser' => $adviser,
+        ];
+    }
+
+    private function validProposalQuery(Request $request, string $key, array $rules): ?string
+    {
+        $value = $request->query($key);
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return Validator::make([$key => $value], [$key => ['required', 'string', ...$rules]])->passes() ? trim($value) : null;
+    }
+
+    private function adminProposalQuery(array $filters): Builder
+    {
+        $query = ResearchProposal::query();
+        if ($filters['course'] !== null || $filters['section'] !== null) {
+            $query->whereHas('studentProfile', function (Builder $students) use ($filters): void {
+                if ($filters['course'] !== null) {
+                    $students->where('course', $filters['course']);
+                }
+                if ($filters['section'] !== null) {
+                    $students->where('section', $filters['section']);
+                }
+            });
+        }
+        if (($filters['adviser'] ?? null) === 'none') {
+            $query->whereDoesntHave('assignment', fn (Builder $assignments) => $assignments->where('status', 'active'));
+        } elseif (($filters['adviser'] ?? null) !== null) {
+            $query->whereHas('assignment', fn (Builder $assignments) => $assignments
+                ->where('status', 'active')->where('faculty_profile_id', (int) $filters['adviser']));
+        }
+
+        return $query;
+    }
+
+    private function proposalOptionCounts(array $filters, string $column): array
+    {
+        $options = config('student_options.'.($column === 'course' ? 'courses' : 'sections'));
+        $query = $this->adminProposalQuery($filters)
+            ->join('student_profiles as option_students', 'option_students.id', '=', 'research_proposals.student_profile_id')
+            ->whereIn('option_students.'.$column, $options)
+            ->select([])
+            ->selectRaw('option_students.'.$column.' as option_value, COUNT(*) as aggregate')
+            ->groupBy('option_students.'.$column)
+            ->pluck('aggregate', 'option_value');
+        $counts = array_fill_keys($options, 0);
+        foreach ($query as $value => $count) {
+            $counts[$value] = (int) $count;
+        }
+
+        return $counts;
     }
 
     public function create(

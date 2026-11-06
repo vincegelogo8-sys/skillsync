@@ -14,8 +14,13 @@
         <dl class="dashboard-metrics grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ($metrics as $metric)
                 <div class="rounded-lg border border-gray-200 bg-white p-5">
-                    <dt class="text-sm text-gray-600"><a href="{{ route($metric['route']) }}" class="underline underline-offset-4">{{ __($metric['label']) }}</a></dt>
-                    <dd class="mt-2 text-xl font-semibold text-gray-900 tabular-nums">{{ $metric['value'] }}</dd>
+                    <dt class="text-sm text-gray-600"><a href="{{ route($metric['route'], $metric['params'] ?? []) }}" class="underline underline-offset-4">{{ __($metric['label']) }}</a></dt>
+                    <dd class="mt-2 text-xl font-semibold text-gray-900 tabular-nums">
+                        {{ $metric['value'] }}
+                        @if (isset($metric['secondary']))
+                            <span class="block text-xs font-normal text-gray-600">{{ $metric['secondary'] }}</span>
+                        @endif
+                    </dd>
                 </div>
             @endforeach
         </dl>

@@ -51,7 +51,7 @@ class ProposalQuotaFailureTest extends TestCase
         $this->quotaFailure($code);
         $bytes = $type === 'pdf' ? DocumentFixtures::pdf() : DocumentFixtures::docx();
         $this->actingAs($student)->post('/student/proposals', [
-            'title' => 'Web records management',
+            'title' => 'Web records management '.$type,
             'document' => UploadedFile::fake()->createWithContent('proposal.'.$type, $bytes),
         ])->assertSessionHasErrors(['analysis' => LocalNlpService::UNAVAILABLE]);
         $proposal = ResearchProposal::sole();

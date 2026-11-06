@@ -208,12 +208,4 @@ class FacultyProfileTest extends TestCase
         $this->assertSame(5, $profile->advisory_limit);
     }
 
-    public function test_account_deletion_removes_its_faculty_profile(): void
-    {
-        $faculty = $this->faculty();
-        $faculty->facultyProfile()->create(['department' => 'Computing']);
-        $this->actingAs($faculty)->delete('/profile', ['password' => 'password'])->assertRedirect('/');
-
-        $this->assertDatabaseMissing('faculty_profiles', ['user_id' => $faculty->id]);
-    }
 }

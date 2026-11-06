@@ -64,9 +64,14 @@ class DashboardTest extends TestCase
     {
         $this->activity('First Proposal');
         $this->activity('Second Proposal');
+        User::where('role', User::ROLE_STUDENT)->orderBy('id')->first()->forceFill(['deactivated_at' => now()])->save();
+        User::where('role', User::ROLE_FACULTY)->orderBy('id')->first()->forceFill(['deactivated_at' => now()])->save();
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $this->actingAs($admin)->get('/admin/dashboard')->assertOk()->assertSee('First Proposal')->assertSee('Second Proposal')->assertSee('Management')
-            ->assertViewHas('metrics', fn ($metrics) => array_column($metrics, 'value', 'label') === ['Research Proposals' => 2, 'Pending Requests' => 2, 'Active Assignments' => 2, 'Awaiting Analysis' => 2, 'Student Accounts' => 2, 'Faculty Accounts' => 2]);
+            ->assertSee('1 active')->assertSee('1 deactivated')
+            ->assertViewHas('metrics', fn ($metrics) => array_column($metrics, 'value', 'label') === ['Research Proposals' => 2, 'Pending Requests' => 2, 'Active Assignments' => 2, 'Awaiting Analysis' => 2, 'Proposals without an adviser' => 0, 'Student Accounts' => '1 active', 'Faculty Accounts' => '1 active']
+                && array_column($metrics, 'secondary', 'label')['Student Accounts'] === '1 deactivated'
+                && array_column($metrics, 'secondary', 'label')['Faculty Accounts'] === '1 deactivated');
     }
 
     public static function profileRoles(): array

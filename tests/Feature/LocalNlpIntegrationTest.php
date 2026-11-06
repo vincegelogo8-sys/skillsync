@@ -50,7 +50,7 @@ class LocalNlpIntegrationTest extends TestCase
         $observations = [];
         foreach ($documents as $type => $bytes) {
             $start = microtime(true);
-            $this->post('/student/proposals', ['title' => 'Crowdsourced School Infrastructure Maintenance',
+            $this->post('/student/proposals', ['title' => 'Crowdsourced School Infrastructure Maintenance '.$type,
                 'document' => UploadedFile::fake()->createWithContent('consistency.'.$type, $bytes),
             ])->assertSessionHasNoErrors();
             $proposal = ResearchProposal::latest('id')->first();

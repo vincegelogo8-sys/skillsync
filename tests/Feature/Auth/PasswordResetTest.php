@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -69,5 +70,27 @@ class PasswordResetTest extends TestCase
 
             return true;
         });
+    }
+
+    public function test_deactivated_account_gets_generic_reset_status_and_cannot_reset_password(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $user->forceFill(['deactivated_at' => now()])->save();
+        $originalPassword = $user->password;
+
+        $this->post('/forgot-password', ['email' => $user->email])
+            ->assertSessionHas('status', __(Password::RESET_LINK_SENT));
+        Notification::assertNothingSent();
+
+        $token = Password::createToken($user);
+        $this->post('/reset-password', [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertSame($originalPassword, $user->fresh()->password);
     }
 }

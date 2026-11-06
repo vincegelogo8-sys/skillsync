@@ -6,6 +6,7 @@
             <form method="POST" action="{{ route('student.proposals.store') }}" enctype="multipart/form-data" class="max-w-2xl space-y-6">
                 @csrf
                 <p class="text-sm text-gray-600">{{ __('Your proposal is analyzed locally to identify research concepts. Your document is accessible to you and Admin.') }}</p>
+                <p class="text-sm text-gray-600">{{ __('Documents and titles you have already uploaded are not accepted again.') }}</p>
                 @php $title = old('title'); @endphp
                 <div>
                     <x-input-label for="title" :value="__('Research Title')" />

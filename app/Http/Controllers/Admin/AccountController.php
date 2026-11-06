@@ -3,75 +3,31 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AccountStatusRequest;
 use App\Http\Requests\Admin\CreateAccountRequest;
 use App\Http\Requests\Admin\UpdateAccountRequest;
 use App\Models\User;
 use App\Services\AccountProvisioningService;
+use App\Services\AccountQueryService;
+use App\Services\AccountStatusService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AccountController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, AccountQueryService $accountQueries): View
     {
-        $type = $this->queryValue($request, 'type', [
-            Rule::in([User::ROLE_STUDENT, User::ROLE_FACULTY]),
-        ]) ?? User::ROLE_STUDENT;
-        $section = $this->queryValue($request, 'section', [
-            Rule::in(config('student_options.sections')),
-        ]);
-        $course = $this->queryValue($request, 'course', [
-            Rule::in(config('student_options.courses')),
-        ]);
-        $search = $this->queryValue($request, 'q', ['max:100']);
-
-        if ($type !== User::ROLE_STUDENT) {
-            $section = null;
-            $course = null;
-        } elseif ($course === null) {
-            $section = null;
-        }
-
-        $accountsQuery = User::query()
-            ->where('role', $type)
-            ->select(['id', 'name', 'email', 'role', 'created_at']);
-
-        if ($type === User::ROLE_STUDENT) {
-            $accountsQuery->with('studentProfile');
-            if ($section !== null || $course !== null) {
-                $accountsQuery->whereHas('studentProfile', function ($query) use ($section, $course): void {
-                    if ($section !== null) {
-                        $query->where('section', $section);
-                    }
-                    if ($course !== null) {
-                        $query->where('course', $course);
-                    }
-                });
-            }
-        } else {
-            $accountsQuery->with('facultyProfile');
-        }
-
-        if ($search !== null) {
-            $accountsQuery->where($this->searchConstraint($search));
-        }
-
-        $allStudentCount = User::query()
-            ->where('role', User::ROLE_STUDENT)
-            ->when($search !== null, fn ($query) => $query->where($this->searchConstraint($search)))
-            ->count();
-
+        $filters = $accountQueries->filters($request);
+        $type = $filters['type'];
+        $course = $filters['course'];
+        $section = $filters['section'];
+        $search = $filters['q'];
         $courseCounts = array_fill_keys(config('student_options.courses'), 0);
-        $groupedCourseCounts = DB::table('student_profiles')
-            ->join('users', 'users.id', '=', 'student_profiles.user_id')
-            ->where('users.role', User::ROLE_STUDENT)
-            ->whereIn('student_profiles.course', config('student_options.courses'))
-            ->when($search !== null, fn ($query) => $query->where($this->searchConstraint($search)))
-            ->select('student_profiles.course')
+        $countFilters = ['type' => User::ROLE_STUDENT, 'status' => $filters['status'], 'q' => $search];
+        $groupedCourseCounts = $accountQueries->studentProfiles($countFilters)
+            ->whereIn('course', config('student_options.courses'))
+            ->select('course')
             ->selectRaw('COUNT(*) as aggregate')
             ->groupBy('student_profiles.course')
             ->pluck('aggregate', 'course');
@@ -82,33 +38,82 @@ class AccountController extends Controller
         $sectionCounts = [];
         if ($course !== null) {
             $sectionCounts = array_fill_keys(config('student_options.sections'), 0);
-            $groupedSectionCounts = DB::table('student_profiles')
-                ->join('users', 'users.id', '=', 'student_profiles.user_id')
-                ->where('users.role', User::ROLE_STUDENT)
-                ->where('student_profiles.course', $course)
-                ->whereIn('student_profiles.section', config('student_options.sections'))
-                ->when($search !== null, fn ($query) => $query->where($this->searchConstraint($search)))
-                ->select('student_profiles.section')
+            $groupedSectionCounts = $accountQueries->studentProfiles([
+                ...$countFilters,
+                'course' => $course,
+            ])
+                ->whereIn('section', config('student_options.sections'))
+                ->select('section')
                 ->selectRaw('COUNT(*) as aggregate')
-                ->groupBy('student_profiles.section')
+                ->groupBy('section')
                 ->pluck('aggregate', 'section');
             foreach ($groupedSectionCounts as $sectionName => $count) {
                 $sectionCounts[$sectionName] = (int) $count;
             }
         }
 
+        $allStudentCount = $accountQueries->accounts($countFilters)->count();
+
         return view('admin.accounts.index', [
-            'accounts' => $accountsQuery->orderByDesc('id')->paginate(20)->withQueryString(),
+            'accounts' => $accountQueries->accounts($filters)->orderByDesc('users.id')->paginate(20)->withQueryString(),
             'type' => $type,
             'section' => $section,
             'course' => $course,
             'search' => $search,
+            'status' => $filters['status'],
             'allStudentCount' => $allStudentCount,
             'courseCounts' => $courseCounts,
             'sectionCounts' => $sectionCounts,
             'studentCount' => User::where('role', User::ROLE_STUDENT)->count(),
             'facultyCount' => User::where('role', User::ROLE_FACULTY)->count(),
         ]);
+    }
+
+    public function deactivate(User $account, AccountStatusService $statuses): RedirectResponse
+    {
+        $this->ensureEditableAccount($account);
+        $result = $statuses->deactivate($account);
+
+        return redirect()->route('admin.accounts.index')->with('status', $result['changed'] > 0
+            ? $account->name.' has been deactivated.'
+            : $account->name.' was already inactive.');
+    }
+
+    public function activate(User $account, AccountStatusService $statuses): RedirectResponse
+    {
+        $this->ensureEditableAccount($account);
+        $result = $statuses->activate($account);
+
+        return redirect()->route('admin.accounts.index')->with('status', $result['changed'] > 0
+            ? $account->name.' has been activated.'
+            : $account->name.' was already active.');
+    }
+
+    public function bulkStatus(
+        AccountStatusRequest $request,
+        AccountQueryService $accountQueries,
+        AccountStatusService $statuses
+    ): RedirectResponse {
+        $validated = $request->validated();
+        $action = $validated['action'];
+        if ((string) ($validated['select_all_matching'] ?? '') === '1') {
+            $ids = $accountQueries->accounts([
+                'type' => User::ROLE_STUDENT,
+                'course' => $validated['course'] ?? null,
+                'section' => $validated['section'] ?? null,
+                'q' => $validated['q'] ?? null,
+                'status' => $validated['status'] ?? 'all',
+            ])->pluck('id')->all();
+        } else {
+            $ids = $validated['ids'];
+        }
+
+        $result = $statuses->{$action}($ids);
+        $verb = $action === 'deactivate' ? 'deactivated' : 'activated';
+        $already = $action === 'deactivate' ? 'already inactive' : 'already active';
+
+        return redirect()->route('admin.accounts.index')
+            ->with('status', $result['changed'].' accounts '.$verb.', '.$result['skipped'].' were '.$already.'.');
     }
 
     public function create(): View
@@ -148,27 +153,5 @@ class AccountController extends Controller
             in_array($account->role, [User::ROLE_STUDENT, User::ROLE_FACULTY], true),
             404
         );
-    }
-
-    private function queryValue(Request $request, string $key, array $rules): ?string
-    {
-        $value = $request->query($key);
-        if (! is_string($value) || trim($value) === '') {
-            return null;
-        }
-
-        $validator = Validator::make([$key => $value], [
-            $key => ['required', 'string', ...$rules],
-        ]);
-
-        return $validator->passes() ? trim($value) : null;
-    }
-
-    private function searchConstraint(string $search): \Closure
-    {
-        return function ($query) use ($search): void {
-            $query->where('users.name', 'like', '%'.$search.'%')
-                ->orWhere('users.email', 'like', '%'.$search.'%');
-        };
     }
 }

@@ -44,6 +44,11 @@ class FacultyProfile extends Model
         return $this->hasMany(AdviserAssignment::class);
     }
 
+    public function adviserRequests(): HasMany
+    {
+        return $this->hasMany(AdviserRequest::class);
+    }
+
     public function activeAssignments(): HasMany
     {
         return $this->assignments()->where('status', AdviserAssignment::STATUS_ACTIVE);

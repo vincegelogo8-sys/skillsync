@@ -10,22 +10,25 @@
     <p class="sidebar-caption">{{ ucfirst($role) }} {{ __('Workspace') }}</p>
     <nav class="sidebar-navigation" aria-label="{{ __('Main navigation') }}">
         <div class="nav-group">
-            <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard', '*.dashboard')">{{ __('Dashboard') }}</x-nav-link>
+            <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard', '*.dashboard')" icon="dashboard">{{ __('Dashboard') }}</x-nav-link>
             @foreach ($workspace['primary'] as $link)
-                <x-nav-link :href="route($link['route'])" :active="request()->routeIs(...$link['active'])">{{ __($link['label']) }}</x-nav-link>
+                <x-nav-link :href="route($link['route'])" :active="request()->routeIs(...$link['active'])" :icon="$link['icon']">{{ __($link['label']) }}</x-nav-link>
             @endforeach
         </div>
         <div class="nav-group">
             <p class="nav-group-label">{{ __($workspace['secondary_label']) }}</p>
             @foreach ($workspace['secondary'] as $link)
-                <x-nav-link :href="route($link['route'])" :active="request()->routeIs(...$link['active'])">{{ __($link['label']) }}</x-nav-link>
+                <x-nav-link :href="route($link['route'])" :active="request()->routeIs(...$link['active'])" :icon="$link['icon']">{{ __($link['label']) }}</x-nav-link>
             @endforeach
         </div>
         <div class="nav-group nav-account">
-            <x-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.*')">{{ __('Account Settings') }}</x-nav-link>
+            <x-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.*')" icon="cog">{{ __('Account Settings') }}</x-nav-link>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button type="submit" class="nav-item nav-logout">{{ __('Logout') }}</button>
+                <button type="submit" class="nav-item nav-logout">
+                    <x-nav-icon name="logout" />
+                    <span class="nav-label">{{ __('Logout') }}</span>
+                </button>
             </form>
         </div>
     </nav>

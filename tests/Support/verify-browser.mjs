@@ -87,7 +87,10 @@ try {
             navigationPassed &&= await evaluate(`!document.querySelector('.sidebar').classList.contains('is-open') && !document.querySelector('.app-main').inert`);
         }
         const design = await evaluate(`({
-            noIcons: document.querySelectorAll('svg, i[class], [class*="icon"]').length === 0,
+            navigationIcons: [...document.querySelectorAll('.sidebar .nav-item')].every(item => {
+                const icon = item.querySelector('svg[aria-hidden="true"][focusable="false"]');
+                return icon && icon.getAttribute('viewBox') === '0 0 24 24';
+            }),
             activeLinks: document.querySelectorAll('.sidebar .nav-item.active[aria-current="page"]').length,
             background: getComputedStyle(document.body).backgroundColor,
             accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
@@ -97,7 +100,7 @@ try {
         const expanded = await evaluate('({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight})');
         const screenshot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: Math.min(expanded.height, 5000), scale: 1 } }, sessionId);
         writeFileSync(join(output, `${name}.png`), Buffer.from(screenshot.data, 'base64'));
-        const passed = metrics.scroll <= metrics.client && expanded.width <= metrics.client && metrics.styles > 0 && keyboardOpened && navigationPassed && design.noIcons && design.activeLinks === 1 && design.accent === '#4338ca' && design.localAssets;
+        const passed = metrics.scroll <= metrics.client && expanded.width <= metrics.client && metrics.styles > 0 && keyboardOpened && navigationPassed && design.navigationIcons && design.activeLinks === 1 && design.accent === '#4338ca' && design.localAssets;
         report.push({ name, ...metrics, expandedWidth: expanded.width, keyboardOpened, navigationPassed, ...design, passed });
     }
     writeFileSync(join(output, 'browser-report.json'), JSON.stringify(report, null, 2));

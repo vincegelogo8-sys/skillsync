@@ -23,6 +23,11 @@ class AdviserRequestService
             abort_unless($actor->role === User::ROLE_STUDENT && $actor->studentProfile?->id === $proposal->student_profile_id, 404);
             $faculty = FacultyProfile::whereKey($faculty->id)->lockForUpdate()->firstOrFail();
             abort_unless($faculty->user->role === User::ROLE_FACULTY, 404);
+            if ($faculty->user->isDeactivated()) {
+                throw ValidationException::withMessages([
+                    'adviser_request' => 'This faculty member is currently inactive. Please choose another adviser.',
+                ]);
+            }
             if (! $proposal->analysis?->hasCurrentAnalysis() || ! $proposal->recommendations()->where('faculty_profile_id', $faculty->id)->exists()) {
                 throw ValidationException::withMessages(['adviser_request' => 'Generate recommendations and choose a recommended faculty member before requesting an adviser.']);
             }

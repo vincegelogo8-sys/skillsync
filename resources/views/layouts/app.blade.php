@@ -7,6 +7,14 @@
 
         <title>{{ isset($header) ? trim(strip_tags($header)) . ' | ' : '' }}SKILLSYNC</title>
 
+        <script>
+            try {
+                if (window.innerWidth >= 901 && window.localStorage.getItem('skillsync.sidebar') === 'collapsed') {
+                    document.documentElement.classList.add('sidebar-collapsed');
+                }
+            } catch {}
+        </script>
+
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -17,7 +25,12 @@
             <div class="app-main">
                 <header class="topbar">
                     <div class="topbar-heading">
-                        <button type="button" class="button button-secondary menu-toggle" aria-controls="workspace-sidebar" aria-expanded="false" data-sidebar-toggle>{{ __('Menu') }}</button>
+                        <button type="button" class="button button-secondary menu-toggle" aria-controls="workspace-sidebar" aria-expanded="false" data-sidebar-toggle>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+                                <path d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <span data-sidebar-toggle-label>{{ __('Menu') }}</span>
+                        </button>
                         <p class="topbar-workspace">{{ ucfirst(Auth::user()->role) }} <span>{{ __('Workspace') }}</span></p>
                     </div>
                     @include('layouts.account-menu')

@@ -15,7 +15,11 @@ class AdviserRequestNotificationService
         DB::afterCommit(function () use ($request, $notificationClass, $recipientRelation) {
             try {
                 $request->load(['studentProfile.user', 'facultyProfile.user', 'researchProposal']);
-                $request->{$recipientRelation}->user->notify(new $notificationClass($request));
+                $recipient = $request->{$recipientRelation}->user;
+                if ($recipient->isDeactivated()) {
+                    return;
+                }
+                $recipient->notify(new $notificationClass($request));
             } catch (Throwable $exception) {
                 // SMTP exceptions may contain server responses; log identifiers only.
                 try {

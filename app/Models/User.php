@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Builder;
 
 class User extends Authenticatable
 {
@@ -58,7 +59,28 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'deactivated_at' => 'datetime',
         ];
+    }
+
+    public function isActive(): bool
+    {
+        return $this->deactivated_at === null;
+    }
+
+    public function isDeactivated(): bool
+    {
+        return $this->deactivated_at !== null;
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('deactivated_at');
+    }
+
+    public function scopeDeactivated(Builder $query): Builder
+    {
+        return $query->whereNotNull('deactivated_at');
     }
 
     public function studentProfile(): HasOne

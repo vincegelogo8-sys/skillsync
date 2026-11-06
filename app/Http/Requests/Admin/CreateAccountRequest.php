@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use App\Models\StudentProfile;
 
 class CreateAccountRequest extends FormRequest
 {
@@ -29,5 +30,22 @@ class CreateAccountRequest extends FormRequest
             'section' => ['exclude_unless:role,'.User::ROLE_STUDENT, 'required', 'string', Rule::in(config('student_options.sections'))],
             'department' => ['exclude_unless:role,'.User::ROLE_FACULTY, 'required', 'string', 'max:150'],
         ];
+    }
+
+    public function messages(): array
+    {
+        $messages = [];
+        $email = $this->input('email');
+        if (is_string($email) && User::where('email', $email)->deactivated()->exists()) {
+            $messages['email.unique'] = 'This belongs to a deactivated account. Activate it instead.';
+        }
+
+        $studentNumber = $this->input('student_number');
+        if (is_string($studentNumber) && StudentProfile::where('student_number', $studentNumber)
+            ->whereHas('user', fn ($query) => $query->deactivated())->exists()) {
+            $messages['student_number.unique'] = 'This belongs to a deactivated account. Activate it instead.';
+        }
+
+        return $messages;
     }
 }

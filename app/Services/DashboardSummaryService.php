@@ -44,8 +44,22 @@ class DashboardSummaryService
             $metrics[] = ['label' => 'Advisory Load', 'value' => $capacity ? $capacity['load'].' / '.$capacity['limit'].' · '.$capacity['status'] : 'Complete your profile', 'route' => 'faculty.assignments.index'];
         }
         if ($role === User::ROLE_ADMIN) {
-            $metrics[] = ['label' => 'Student Accounts', 'value' => User::where('role', User::ROLE_STUDENT)->count(), 'route' => 'admin.accounts.index'];
-            $metrics[] = ['label' => 'Faculty Accounts', 'value' => User::where('role', User::ROLE_FACULTY)->count(), 'route' => 'admin.accounts.index'];
+            $metrics[] = [
+                'label' => 'Proposals without an adviser',
+                'value' => ResearchProposal::whereDoesntHave('assignment', fn ($query) => $query->where('status', AdviserAssignment::STATUS_ACTIVE))->count(),
+                'route' => 'admin.proposals.index',
+                'params' => ['adviser' => 'none'],
+            ];
+            foreach ([User::ROLE_STUDENT => 'Student Accounts', User::ROLE_FACULTY => 'Faculty Accounts'] as $accountRole => $label) {
+                $active = User::where('role', $accountRole)->active()->count();
+                $deactivated = User::where('role', $accountRole)->deactivated()->count();
+                $metrics[] = [
+                    'label' => $label,
+                    'value' => $active.' active',
+                    'secondary' => $deactivated.' deactivated',
+                    'route' => 'admin.accounts.index',
+                ];
+            }
         }
 
         return [

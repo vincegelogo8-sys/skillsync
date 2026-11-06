@@ -13,12 +13,166 @@ document.querySelectorAll('dialog[data-show="true"]').forEach((dialog) => {
     dialog.showModal();
 });
 
+const accountCheckboxes = [...document.querySelectorAll('[data-account-checkbox]')];
+const selectPageCheckbox = document.querySelector('[data-select-page]');
+const bulkActionBar = document.querySelector('[data-bulk-action-bar]');
+const selectAllMatchingLink = document.querySelector('[data-select-all-matching]');
+const clearMatchingButton = document.querySelector('[data-clear-matching]');
+const bulkActionValue = document.querySelector('[data-bulk-action-value]');
+const selectAllMatchingInput = document.querySelector('[name="select_all_matching"]');
+const selectionSummary = document.querySelector('[data-selection-summary]');
+let selectingAllMatches = false;
+
+function updateAccountSelection() {
+    if (!bulkActionBar || !selectAllMatchingLink) return;
+    const checkedCount = accountCheckboxes.filter((checkbox) => checkbox.checked).length;
+    const allOnPage = accountCheckboxes.length > 0 && checkedCount === accountCheckboxes.length;
+    const total = Number(selectAllMatchingLink.textContent.match(/\d+/)?.[0] ?? 0);
+
+    bulkActionBar.hidden = checkedCount === 0 && !selectingAllMatches;
+    selectAllMatchingLink.hidden = !allOnPage || total <= accountCheckboxes.length || selectingAllMatches;
+    clearMatchingButton.hidden = !selectingAllMatches;
+    if (selectionSummary) {
+        selectionSummary.textContent = selectingAllMatches
+            ? `${total} students matching this filter are selected.`
+            : `${checkedCount} students selected on this page.`;
+    }
+}
+
+selectPageCheckbox?.addEventListener('change', () => {
+    accountCheckboxes.forEach((checkbox) => {
+        checkbox.checked = selectPageCheckbox.checked;
+    });
+    updateAccountSelection();
+});
+
+accountCheckboxes.forEach((checkbox) => checkbox.addEventListener('change', () => {
+    if (selectPageCheckbox) {
+        selectPageCheckbox.checked = accountCheckboxes.length > 0 && accountCheckboxes.every((item) => item.checked);
+    }
+    updateAccountSelection();
+}));
+
+selectAllMatchingLink?.addEventListener('click', (event) => {
+    event.preventDefault();
+    selectingAllMatches = true;
+    if (selectAllMatchingInput) selectAllMatchingInput.value = '1';
+    accountCheckboxes.forEach((checkbox) => {
+        checkbox.checked = false;
+        checkbox.disabled = true;
+    });
+    updateAccountSelection();
+});
+
+clearMatchingButton?.addEventListener('click', () => {
+    selectingAllMatches = false;
+    if (selectAllMatchingInput) selectAllMatchingInput.value = '';
+    accountCheckboxes.forEach((checkbox) => {
+        checkbox.disabled = false;
+        checkbox.checked = false;
+    });
+    if (selectPageCheckbox) selectPageCheckbox.checked = false;
+    updateAccountSelection();
+});
+
+document.querySelectorAll('[data-bulk-status-action]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const action = button.dataset.bulkStatusAction;
+        const count = selectingAllMatches
+            ? Number(selectAllMatchingLink?.textContent.match(/\d+/)?.[0] ?? 0)
+            : accountCheckboxes.filter((checkbox) => checkbox.checked).length;
+        const verb = action === 'deactivate' ? 'deactivate' : 'activate';
+        const title = document.querySelector('[data-bulk-confirm-title]');
+        const message = document.querySelector('[data-bulk-confirm-message]');
+
+        if (bulkActionValue) bulkActionValue.value = action;
+        if (title) title.textContent = `${action === 'deactivate' ? 'Deactivate' : 'Activate'} ${count} students?`;
+        if (message) {
+            message.textContent = action === 'deactivate'
+                ? `${count} students will be deactivated and logged out immediately. Their data will be kept and they can be reactivated later.`
+                : `${count} students will be activated and able to sign in again. Their existing data will be kept.`;
+        }
+        button.dataset.bulkActionVerb = verb;
+    });
+});
+updateAccountSelection();
+
+const adviserGroups = [...document.querySelectorAll('details.adviser-group')];
+const expandAdvisersButton = document.querySelector('[data-accordion-expand-all]');
+const collapseAdvisersButton = document.querySelector('[data-accordion-collapse-all]');
+
+if (adviserGroups.length) {
+    if (expandAdvisersButton) expandAdvisersButton.hidden = false;
+    if (collapseAdvisersButton) collapseAdvisersButton.hidden = false;
+}
+
+expandAdvisersButton?.addEventListener('click', () => {
+    adviserGroups.forEach((group) => { group.open = true; });
+});
+
+collapseAdvisersButton?.addEventListener('click', () => {
+    adviserGroups.forEach((group) => { group.open = false; });
+});
+
 // Presentation only: links still navigate through the existing Laravel routes.
 const sidebar = document.getElementById('workspace-sidebar');
 const menuButton = document.querySelector('[data-sidebar-toggle]');
 const overlay = document.querySelector('[data-sidebar-overlay]');
 const appMain = document.querySelector('.app-main');
 const mobileViewport = window.matchMedia('(max-width: 900px)');
+const sidebarToggleLabel = menuButton?.querySelector('[data-sidebar-toggle-label]');
+const sidebarPreferenceKey = 'skillsync.sidebar';
+
+function readSidebarPreference() {
+    try {
+        return window.localStorage.getItem(sidebarPreferenceKey) === 'collapsed' ? 'collapsed' : 'expanded';
+    } catch {
+        return 'expanded';
+    }
+}
+
+function writeSidebarPreference(preference) {
+    try {
+        window.localStorage.setItem(sidebarPreferenceKey, preference);
+    } catch {
+        // The visible state still works when storage is unavailable.
+    }
+}
+
+function updateDesktopSidebarToggle() {
+    const collapsed = document.documentElement.classList.contains('sidebar-collapsed');
+    menuButton.setAttribute('aria-expanded', String(!collapsed));
+    if (sidebarToggleLabel) sidebarToggleLabel.textContent = collapsed ? 'Expand menu' : 'Collapse menu';
+    updateSidebarTitles(collapsed);
+}
+
+function updateSidebarTitles(collapsed) {
+    if (!sidebar) return;
+
+    sidebar.querySelectorAll('.nav-item').forEach((item) => {
+        const label = item.querySelector('.nav-label')?.textContent.trim();
+        if (collapsed && label) {
+            item.title = label;
+        } else {
+            item.removeAttribute('title');
+        }
+    });
+}
+
+function syncSidebarState() {
+    if (!sidebar || !menuButton) return;
+
+    if (mobileViewport.matches) {
+        menuButton.setAttribute('aria-expanded', String(sidebar.classList.contains('is-open')));
+        if (sidebarToggleLabel) sidebarToggleLabel.textContent = 'Menu';
+        updateSidebarTitles(false);
+        return;
+    }
+
+    const collapsed = readSidebarPreference() === 'collapsed';
+    document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+    updateDesktopSidebarToggle();
+}
 
 function closeDropdowns(except = null) {
     document.querySelectorAll('[data-dropdown][open]').forEach((dropdown) => {
@@ -31,13 +185,23 @@ function closeMobileSidebar(restoreFocus = true) {
     const wasOpen = sidebar.classList.contains('is-open');
     sidebar.classList.remove('is-open');
     document.body.classList.remove('sidebar-open');
-    menuButton.setAttribute('aria-expanded', 'false');
+    if (mobileViewport.matches) menuButton.setAttribute('aria-expanded', 'false');
     overlay.hidden = true;
     appMain.inert = false;
     if (wasOpen && restoreFocus) menuButton.focus();
+    if (mobileViewport.matches) syncSidebarState();
 }
 
 menuButton?.addEventListener('click', () => {
+    if (!mobileViewport.matches) {
+        const collapsed = !document.documentElement.classList.contains('sidebar-collapsed');
+        document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+        writeSidebarPreference(collapsed ? 'collapsed' : 'expanded');
+        updateDesktopSidebarToggle();
+        menuButton.focus();
+        return;
+    }
+
     if (sidebar.classList.contains('is-open')) {
         closeMobileSidebar();
         return;
@@ -46,6 +210,7 @@ menuButton?.addEventListener('click', () => {
     sidebar.classList.add('is-open');
     document.body.classList.add('sidebar-open');
     menuButton.setAttribute('aria-expanded', 'true');
+    if (sidebarToggleLabel) sidebarToggleLabel.textContent = 'Menu';
     overlay.hidden = false;
     appMain.inert = true;
     sidebar.querySelector('[data-sidebar-close]').focus();
@@ -53,12 +218,19 @@ menuButton?.addEventListener('click', () => {
 
 overlay?.addEventListener('click', () => closeMobileSidebar());
 document.querySelector('[data-sidebar-close]')?.addEventListener('click', () => closeMobileSidebar());
-mobileViewport.addEventListener('change', () => closeMobileSidebar(false));
-window.addEventListener('pageshow', () => closeMobileSidebar(false));
+mobileViewport.addEventListener('change', () => {
+    closeMobileSidebar(false);
+    syncSidebarState();
+});
+window.addEventListener('pageshow', () => {
+    closeMobileSidebar(false);
+    syncSidebarState();
+});
+syncSidebarState();
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-        closeMobileSidebar();
+        if (mobileViewport.matches) closeMobileSidebar();
         const dropdown = document.querySelector('[data-dropdown][open]');
         dropdown?.querySelector('summary')?.focus();
         closeDropdowns();
@@ -81,7 +253,7 @@ document.addEventListener('click', (event) => {
     closeDropdowns(event.target.closest('[data-dropdown]'));
     if (event.target.closest('.sidebar a, [data-dropdown] a')) {
         closeDropdowns();
-        closeMobileSidebar();
+        if (mobileViewport.matches) closeMobileSidebar();
     }
 });
 document.addEventListener('focusin', (event) => {

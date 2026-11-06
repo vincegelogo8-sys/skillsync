@@ -5,11 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Throwable;
 
 class ProfileController extends Controller
 {
@@ -39,35 +36,4 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
-        $user = $request->user();
-
-        $proposalFiles = $user->studentProfile?->researchProposals()->pluck('file_path')->all() ?? [];
-
-        Auth::logout();
-
-        $user->delete();
-
-        // Database cascades remove proposal rows; also remove this account's files.
-        if ($proposalFiles) {
-            try {
-                Storage::disk('proposals')->delete($proposalFiles);
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        }
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
-    }
 }

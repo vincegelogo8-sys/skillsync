@@ -20,6 +20,8 @@ class ResearchProposalTest extends TestCase
     use RefreshDatabase;
 
     private array $temporaryFiles = [];
+    private int $fixtureSequence = 0;
+    private int $uploadSequence = 0;
 
     protected function setUp(): void
     {
@@ -58,7 +60,7 @@ class ResearchProposalTest extends TestCase
 
     private function pdf(string $name = 'proposal.pdf', ?int $bytes = null): UploadedFile
     {
-        $content = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
+        $content = "%PDF-1.4\n% Fixture ".(++$this->fixtureSequence)."\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
 
         return $this->file($name, $bytes ? str_pad($content, $bytes, ' ') : $content, 'application/pdf');
     }
@@ -93,8 +95,10 @@ class ResearchProposalTest extends TestCase
 
     private function upload(User $student, ?UploadedFile $file = null, array $extra = []): ResearchProposal
     {
+        $sequence = ++$this->uploadSequence;
         $this->actingAs($student)->post('/student/proposals', array_replace([
-            'title' => 'Research Proposal Example', 'document' => $file ?? $this->pdf(),
+            'title' => $sequence === 1 ? 'Research Proposal Example' : 'Research Proposal Example '.$sequence,
+            'document' => $file ?? $this->pdf(),
         ], $extra))->assertSessionHasNoErrors()->assertRedirect();
 
         return $student->studentProfile->researchProposals()->latest('id')->firstOrFail();
@@ -198,7 +202,7 @@ class ResearchProposalTest extends TestCase
             'student_profile_id' => $other->studentProfile->id, 'user_id' => $other->id,
             'file_path' => '../../public/evil.php', 'original_filename' => 'forged.php', 'file_type' => 'php', 'status' => 'approved',
         ]);
-        $second = $this->upload($student);
+        $second = $this->upload($student, $this->pdf(), ['title' => 'A Different Research Proposal']);
         $this->assertNotSame($proposal->file_path, $second->file_path);
         $this->assertSame('uploaded', $proposal->status);
         $this->assertSame('pdf', $proposal->file_type);
@@ -285,6 +289,164 @@ class ResearchProposalTest extends TestCase
         $this->assertCount(0, Storage::disk('proposals')->allFiles());
     }
 
+    public function test_same_file_is_rejected_for_the_same_student_even_when_renamed(): void
+    {
+        $student = $this->student();
+        $file = $this->pdf();
+        $contents = file_get_contents($file->getRealPath());
+        $proposal = $this->upload($student, $file, ['title' => 'First proposal']);
+
+        $this->actingAs($student)->post('/student/proposals', [
+            'title' => 'A different title',
+            'document' => $this->file('renamed.pdf', $contents, 'application/pdf'),
+        ])->assertSessionHasErrors('document');
+
+        $this->assertDatabaseCount('research_proposals', 1);
+        $this->assertCount(1, Storage::disk('proposals')->allFiles());
+        $this->assertSame(hash('sha256', $contents), $proposal->fresh()->file_hash);
+    }
+
+    public function test_normalized_duplicate_title_is_rejected_with_different_file(): void
+    {
+        $student = $this->student();
+        $this->upload($student, $this->pdf(), ['title' => 'Funeral  Preference Recommender!']);
+
+        $this->actingAs($student)->post('/student/proposals', [
+            'title' => 'funeral preference recommender',
+            'document' => $this->pdf('different.pdf'),
+        ])->assertSessionHasErrors('title');
+
+        $this->assertDatabaseCount('research_proposals', 1);
+        $this->assertCount(1, Storage::disk('proposals')->allFiles());
+    }
+
+    public function test_duplicate_file_and_title_report_both_errors(): void
+    {
+        $student = $this->student();
+        $file = $this->pdf();
+        $contents = file_get_contents($file->getRealPath());
+        $this->upload($student, $file, ['title' => 'Funeral  Preference Recommender!']);
+
+        $this->actingAs($student)->post('/student/proposals', [
+            'title' => 'funeral preference recommender',
+            'document' => $this->file('renamed.pdf', $contents, 'application/pdf'),
+        ])->assertSessionHasErrors(['document', 'title']);
+
+        $this->assertDatabaseCount('research_proposals', 1);
+        $this->assertCount(1, Storage::disk('proposals')->allFiles());
+    }
+
+    public function test_different_students_can_upload_the_same_file_and_title(): void
+    {
+        $firstStudent = $this->student();
+        $secondStudent = $this->student();
+        $file = $this->pdf();
+        $contents = file_get_contents($file->getRealPath());
+        $first = $this->upload($firstStudent, $file, ['title' => 'Shared Group Proposal']);
+
+        $this->actingAs($secondStudent)->post('/student/proposals', [
+            'title' => 'Shared Group Proposal',
+            'document' => $this->file('shared-copy.pdf', $contents, 'application/pdf'),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $second = $secondStudent->studentProfile->researchProposals()->firstOrFail();
+        $this->assertNotSame($first->student_profile_id, $second->student_profile_id);
+        $this->assertSame($first->file_hash, $second->file_hash);
+        $this->assertSame($first->title_key, $second->title_key);
+        $this->assertCount(2, Storage::disk('proposals')->allFiles());
+    }
+
+    public function test_deleting_a_proposal_allows_uploading_its_file_and_title_again(): void
+    {
+        $student = $this->student();
+        $file = $this->pdf();
+        $contents = file_get_contents($file->getRealPath());
+        $proposal = $this->upload($student, $file, ['title' => 'Upload again later']);
+
+        $this->actingAs($student)->delete('/student/proposals/'.$proposal->id)->assertRedirect();
+        $this->actingAs($student)->post('/student/proposals', [
+            'title' => 'Upload again later',
+            'document' => $this->file('again.pdf', $contents, 'application/pdf'),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertDatabaseCount('research_proposals', 1);
+        $this->assertCount(1, Storage::disk('proposals')->allFiles());
+    }
+
+    public function test_rejected_duplicate_has_no_side_effects_and_never_extracts_or_analyzes(): void
+    {
+        $student = $this->student();
+        $file = $this->pdf();
+        $contents = file_get_contents($file->getRealPath());
+        $this->upload($student, $file, ['title' => 'Existing proposal']);
+        $this->mock(ProposalExtractionService::class)->shouldNotReceive('extract');
+        $this->mock(\App\Services\ProposalAnalysisService::class)->shouldNotReceive('analyze');
+
+        $this->actingAs($student)->post('/student/proposals', [
+            'title' => 'Existing proposal',
+            'document' => $this->file('duplicate.pdf', $contents, 'application/pdf'),
+        ])->assertSessionHasErrors(['document', 'title']);
+
+        $this->assertDatabaseCount('research_proposals', 1);
+        $this->assertDatabaseCount('proposal_analyses', 0);
+        $this->assertCount(1, Storage::disk('proposals')->allFiles());
+    }
+
+    public function test_service_cleans_up_a_file_when_unique_constraints_catch_a_race(): void
+    {
+        $student = $this->student();
+        $source = $this->pdf();
+        $contents = file_get_contents($source->getRealPath());
+        $hash = hash('sha256', $contents);
+        $proposal = $student->studentProfile->researchProposals()->make();
+        $proposal->forceFill([
+            'title' => 'Race proposal',
+            'file_path' => 'existing.pdf',
+            'file_hash' => $hash,
+            'title_key' => 'race proposal',
+            'original_filename' => 'existing.pdf',
+            'file_type' => 'pdf',
+            'status' => 'uploaded',
+        ])->save();
+
+        try {
+            app(\App\Services\ResearchProposalService::class)->upload(
+                $student->studentProfile,
+                'Race proposal',
+                $this->file('race-copy.pdf', $contents, 'application/pdf')
+            );
+            $this->fail('The database unique constraint should reject the duplicate.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            $this->assertArrayHasKey('document', $exception->errors());
+            $this->assertArrayHasKey('title', $exception->errors());
+        }
+
+        $this->assertDatabaseCount('research_proposals', 1);
+        $this->assertCount(0, Storage::disk('proposals')->allFiles());
+    }
+
+    public function test_different_file_is_accepted_after_an_extraction_failure(): void
+    {
+        $student = $this->student();
+        $extractor = $this->mock(ProposalExtractionService::class);
+        $extractor->shouldReceive('extract')->once()->andThrow(\Illuminate\Validation\ValidationException::withMessages([
+            'extraction' => 'Temporary extraction failure.',
+        ]));
+        $this->actingAs($student)->post('/student/proposals', [
+            'title' => 'First failed extraction',
+            'document' => $this->pdf(),
+        ])->assertSessionHasErrors('extraction');
+
+        $extractor->shouldReceive('extract')->once()->andReturnUsing(fn ($proposal) => $proposal);
+        $this->post('/student/proposals', [
+            'title' => 'Corrected proposal',
+            'document' => $this->pdf('corrected.pdf'),
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('research_proposals', 2);
+        $this->assertCount(2, Storage::disk('proposals')->allFiles());
+    }
+
     public function test_storage_failure_creates_no_proposal_record(): void
     {
         $disk = Mockery::mock();
@@ -296,18 +458,4 @@ class ResearchProposalTest extends TestCase
         $this->assertDatabaseCount('research_proposals', 0);
     }
 
-    public function test_account_deletion_removes_only_its_proposal_files_and_records(): void
-    {
-        $owner = $this->student();
-        $other = $this->student();
-        $proposal = $this->upload($owner);
-        $otherProposal = $this->upload($other);
-        $this->actingAs($owner)->delete('/profile', ['password' => 'wrong'])->assertSessionHasErrorsIn('userDeletion', 'password');
-        Storage::disk('proposals')->assertExists($proposal->file_path);
-        $this->delete('/profile', ['password' => 'password'])->assertRedirect('/');
-        Storage::disk('proposals')->assertMissing($proposal->file_path);
-        Storage::disk('proposals')->assertExists($otherProposal->file_path);
-        $this->assertDatabaseMissing('research_proposals', ['id' => $proposal->id]);
-        $this->assertDatabaseHas('research_proposals', ['id' => $otherProposal->id]);
-    }
 }

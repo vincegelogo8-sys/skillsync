@@ -76,6 +76,9 @@
                         <p class="font-semibold">
                             {{ __('Assigned Adviser') }}:
                             {{ $proposal->assignment->facultyProfile->user->name }}
+                            @if ($proposal->assignment->facultyProfile->user->isDeactivated())
+                                <x-status-badge status="inactive">{{ __('Inactive') }}</x-status-badge>
+                            @endif
                         </p>
 
                         <p class="mt-1">

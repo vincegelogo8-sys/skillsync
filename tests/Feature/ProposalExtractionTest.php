@@ -23,6 +23,8 @@ class ProposalExtractionTest extends TestCase
 {
     use RefreshDatabase;
 
+    private int $proposalSequence = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -39,8 +41,11 @@ class ProposalExtractionTest extends TestCase
 
     private function uploaded(User $student, string $bytes = '', string $type = 'pdf'): ResearchProposal
     {
-        return app(ResearchProposalService::class)->upload($student->studentProfile, 'Research Proposal',
-            UploadedFile::fake()->createWithContent('proposal.'.$type, $bytes ?: DocumentFixtures::pdf()));
+        $sequence = ++$this->proposalSequence;
+        $bytes = $bytes ?: DocumentFixtures::pdf(['Objectives:', 'Research proposal fixture '.$sequence]);
+
+        return app(ResearchProposalService::class)->upload($student->studentProfile, 'Research Proposal '.$sequence,
+            UploadedFile::fake()->createWithContent('proposal.'.$type, $bytes));
     }
 
     public static function types(): array
@@ -53,7 +58,7 @@ class ProposalExtractionTest extends TestCase
     {
         $student = $this->student();
         $bytes = $type === 'pdf' ? DocumentFixtures::pdf() : DocumentFixtures::docx();
-        $this->actingAs($student)->post('/student/proposals', ['title' => 'Real document', 'document' => UploadedFile::fake()->createWithContent('proposal.'.$type, $bytes)])
+        $this->actingAs($student)->post('/student/proposals', ['title' => 'Real document '.$type, 'document' => UploadedFile::fake()->createWithContent('proposal.'.$type, $bytes)])
             ->assertSessionHasNoErrors()->assertRedirect();
         $proposal = ResearchProposal::sole();
         $this->assertSame('extracted', $proposal->status, $proposal->extraction_error ?? '');
@@ -199,7 +204,7 @@ class ProposalExtractionTest extends TestCase
         Storage::disk('proposals')->assertExists($proposal->file_path);
     }
 
-    public function test_extracted_text_is_escaped_and_cascades_on_account_deletion(): void
+    public function test_extracted_text_is_escaped(): void
     {
         $student = $this->student();
         $proposal = $this->uploaded($student);
@@ -207,9 +212,8 @@ class ProposalExtractionTest extends TestCase
         $this->mock(DocumentExtractionRunner::class)->shouldReceive('extract')->once()->andReturn($text);
         $this->actingAs($student)->post('/student/proposals/'.$proposal->id.'/extract')->assertRedirect();
         $this->get('/student/proposals/'.$proposal->id)->assertSee($text)->assertDontSee($text, false);
-        $this->delete('/profile', ['password' => 'password'])->assertRedirect('/');
-        $this->assertDatabaseCount('proposal_analyses', 0);
-        Storage::disk('proposals')->assertMissing($proposal->file_path);
+        $this->assertDatabaseHas('proposal_analyses', ['research_proposal_id' => $proposal->id]);
+        Storage::disk('proposals')->assertExists($proposal->file_path);
     }
 
     public function test_oversized_docx_parts_are_rejected_before_parsing(): void

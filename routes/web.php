@@ -33,14 +33,14 @@ Route::get(
     '/adviser-requests/{adviserRequest}/proposal',
     [AdviserRequestController::class, 'viewProposal']
 )
-    ->middleware('auth')
+    ->middleware(['auth', 'active'])
     ->name('adviser-requests.proposal');
 
 Route::get(
     '/dashboard',
     DashboardController::class
 )
-    ->middleware('auth')
+    ->middleware(['auth', 'active'])
     ->name('dashboard');
 
 /*
@@ -51,6 +51,7 @@ Route::get(
 
 Route::middleware([
     'auth',
+    'active',
     'role:student',
 ])
     ->prefix('student')
@@ -198,6 +199,7 @@ Route::middleware([
 
 Route::middleware([
     'auth',
+    'active',
     'role:faculty',
 ])
     ->prefix('faculty')
@@ -220,6 +222,12 @@ Route::middleware([
             [AdviserAssignmentController::class, 'index']
         )
             ->name('assignments.index');
+
+        Route::get(
+            '/assignments/{assignment}/proposal',
+            [AdviserAssignmentController::class, 'viewAssignmentProposal']
+        )
+            ->name('assignments.proposal');
 
         Route::post(
             '/requests/{adviserRequest}/approve',
@@ -291,6 +299,7 @@ Route::middleware([
 
 Route::middleware([
     'auth',
+    'active',
     'role:admin',
 ])
     ->prefix('admin')
@@ -362,6 +371,24 @@ Route::middleware([
         )
             ->name('accounts.update');
 
+        Route::patch(
+            '/accounts/{account}/deactivate',
+            [AccountController::class, 'deactivate']
+        )
+            ->name('accounts.deactivate');
+
+        Route::patch(
+            '/accounts/{account}/activate',
+            [AccountController::class, 'activate']
+        )
+            ->name('accounts.activate');
+
+        Route::post(
+            '/accounts/bulk-status',
+            [AccountController::class, 'bulkStatus']
+        )
+            ->name('accounts.bulk-status');
+
         /*
         |--------------------------------------------------------------------------
         | Admin Proposal Review
@@ -420,7 +447,7 @@ Route::middleware([
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth')
+Route::middleware(['auth', 'active'])
     ->group(function () {
         Route::get(
             '/profile',
@@ -434,11 +461,6 @@ Route::middleware('auth')
         )
             ->name('profile.update');
 
-        Route::delete(
-            '/profile',
-            [ProfileController::class, 'destroy']
-        )
-            ->name('profile.destroy');
     });
 
 require __DIR__.'/auth.php';

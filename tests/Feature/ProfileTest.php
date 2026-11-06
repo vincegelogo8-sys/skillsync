@@ -84,39 +84,12 @@ class ProfileTest extends TestCase
         $this->actingAs($admin)->patch('/profile', ['name' => $admin->name, 'email' => 'admin@example.com'])->assertSessionHasNoErrors();
     }
 
-    public function test_user_can_delete_their_account(): void
+    public function test_profile_page_has_no_delete_account_section_or_route(): void
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->delete('/profile', [
-                'password' => 'password',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
-
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
-    }
-
-    public function test_correct_password_must_be_provided_to_delete_account(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from('/profile')
-            ->delete('/profile', [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrorsIn('userDeletion', 'password')
-            ->assertRedirect('/profile');
-
+        $this->actingAs($user)->get('/profile')->assertOk()->assertDontSee('Delete Account');
+        $this->delete('/profile')->assertMethodNotAllowed();
         $this->assertNotNull($user->fresh());
     }
 }

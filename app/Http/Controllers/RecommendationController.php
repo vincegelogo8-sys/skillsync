@@ -31,13 +31,17 @@ class RecommendationController extends Controller
         $hasRelevantFaculty = false;
         if ($proposal->analysis?->hasCurrentAnalysis()) {
             $proposal->analysis->setRelation('researchProposal', $proposal);
-            $hasRelevantFaculty = FacultyProfile::whereHas('user', fn ($query) => $query->where('role', User::ROLE_FACULTY))
+            $hasRelevantFaculty = FacultyProfile::whereHas('user', fn ($query) => $query->where('role', User::ROLE_FACULTY)->active())
                 ->with('expertise')->get()
                 ->contains(fn (FacultyProfile $faculty) => $expertiseMatching->matches($proposal->analysis, $faculty) !== []);
         }
         $eligible = $proposal->analysis?->hasCurrentAnalysis()
             ? $proposal->recommendations()->with('facultyProfile.user', 'facultyProfile.expertise')->get()
                 ->filter(function ($recommendation) use ($proposal, $expertiseMatching) {
+                    if (! $recommendation->facultyProfile?->user?->isActive()) {
+                        return false;
+                    }
+
                     $matches = $expertiseMatching->matches($proposal->analysis, $recommendation->facultyProfile);
                     if ($matches === []) {
                         return false;
@@ -66,7 +70,7 @@ class RecommendationController extends Controller
             'activeRequests' => AdviserRequest::where('research_proposal_id', $proposal->id)->whereIn('status', AdviserRequest::ACTIVE_STATUSES)->pluck('faculty_profile_id')->all(),
             'hasAssignment' => $proposal->assignment()->where('status', 'active')->exists(),
             'capacities' => $threshold->forFaculties($recommendations->getCollection()->pluck('facultyProfile')),
-            'hasFaculty' => FacultyProfile::whereHas('user', fn ($query) => $query->where('role', User::ROLE_FACULTY))->exists(),
+            'hasFaculty' => FacultyProfile::whereHas('user', fn ($query) => $query->where('role', User::ROLE_FACULTY)->active())->exists(),
             'hasRelevantFaculty' => $hasRelevantFaculty,
         ]);
     }

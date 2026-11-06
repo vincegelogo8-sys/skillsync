@@ -17,8 +17,20 @@
                         <h3 class="font-semibold text-gray-900 break-words">{{ $adviserRequest->researchProposal->title }}</h3>
                         <x-status-badge :status="$adviserRequest->status" />
                     </div>
-                    <p class="mt-2 text-sm text-gray-700">{{ __('Faculty') }}: {{ $adviserRequest->facultyProfile->user->name }}</p>
-                    @if ($role !== 'student')<p class="mt-2 text-sm text-gray-700">{{ __('Student') }}: {{ $adviserRequest->studentProfile->user->name }} · {{ $adviserRequest->studentProfile->student_number }}</p>@endif
+                    <p class="mt-2 text-sm text-gray-700">
+                        {{ __('Faculty') }}: {{ $adviserRequest->facultyProfile->user->name }}
+                        @if ($adviserRequest->facultyProfile->user->isDeactivated()) <x-status-badge status="inactive">{{ __('Inactive') }}</x-status-badge> @endif
+                    </p>
+                    @if ($role === 'student' && $adviserRequest->status === 'pending' && $adviserRequest->facultyProfile->user->isDeactivated())
+                        <p class="mt-1 text-sm text-gray-600">{{ __('This adviser\'s account is inactive. Cancel this request to choose another adviser.') }}</p>
+                    @endif
+                    @if ($role !== 'student')
+                        <p class="mt-2 text-sm text-gray-700">
+                            {{ __('Student') }}: {{ $adviserRequest->studentProfile->user->name }}
+                            @if ($adviserRequest->studentProfile->user->isDeactivated()) <x-status-badge status="inactive">{{ __('Inactive') }}</x-status-badge> @endif
+                            · {{ $adviserRequest->studentProfile->student_number }}
+                        </p>
+                    @endif
                     <p class="mt-2 text-xs text-gray-600">{{ __('Requested') }} {{ $adviserRequest->requested_at->format('Y-m-d H:i T') }} @if ($adviserRequest->responded_at) · {{ __('Updated') }} {{ $adviserRequest->responded_at->format('Y-m-d H:i T') }} @endif</p>
                     <div class="mt-4 flex flex-wrap items-center gap-4">
                         @if ($role === 'faculty')<a href="{{ route('adviser-requests.proposal', $adviserRequest) }}" target="_blank" rel="noopener" class="button button-secondary inline-flex items-center">{{ __('View Proposal') }}</a>@endif

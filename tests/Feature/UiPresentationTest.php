@@ -14,6 +14,95 @@ class UiPresentationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_workspace_dashboards_render_a_toggle_and_guest_login_does_not(): void
+    {
+        $this->get('/login')->assertOk()->assertDontSee('data-sidebar-toggle', false);
+
+        foreach (['admin', 'faculty', 'student'] as $role) {
+            $user = User::factory()->create(['role' => $role]);
+            if ($role === 'student') {
+                $user->studentProfile()->create([
+                    'student_number' => 'UI-'.$user->id,
+                    'course' => 'BSIT',
+                    'year_level' => 3,
+                    'section' => 'B',
+                ]);
+            }
+
+            $response = $this->actingAs($user)->get('/'.$role.'/dashboard')->assertOk();
+            $response->assertSee('id="workspace-sidebar"', false)
+                ->assertSee('data-sidebar-toggle', false)
+                ->assertSee('aria-controls="workspace-sidebar"', false);
+        }
+    }
+
+    public function test_every_configured_navigation_link_has_a_supported_icon(): void
+    {
+        $supported = [
+            'dashboard', 'document', 'inbox', 'clipboard-check', 'graduation-cap',
+            'user', 'sparkles', 'users', 'sliders', 'cog', 'logout',
+        ];
+        $links = collect(config('workspace_navigation'))
+            ->flatMap(fn (array $workspace) => [...$workspace['primary'], ...$workspace['secondary']]);
+
+        $this->assertCount(13, $links);
+        foreach ($links as $link) {
+            $this->assertArrayHasKey('icon', $link);
+            $this->assertContains($link['icon'], $supported);
+            $this->assertStringContainsString(
+                'aria-hidden="true"',
+                view('components.nav-icon', ['name' => $link['icon']])->render()
+            );
+        }
+    }
+
+    public function test_sidebar_navigation_items_all_render_icons_and_logout_posts_to_logout(): void
+    {
+        foreach (['admin', 'faculty', 'student'] as $role) {
+            $user = User::factory()->create(['role' => $role]);
+            if ($role === 'student') {
+                $user->studentProfile()->create([
+                    'student_number' => 'ICON-'.$user->id,
+                    'course' => 'BSIT',
+                    'year_level' => 3,
+                    'section' => 'B',
+                ]);
+            }
+
+            $response = $this->actingAs($user)->get('/'.$role.'/dashboard')->assertOk();
+            preg_match('/<aside\b[^>]*id="workspace-sidebar"[^>]*>(.*?)<\/aside>/s', $response->getContent(), $sidebarMatch);
+            $this->assertNotEmpty($sidebarMatch[1] ?? null);
+            preg_match_all('/class="nav-item[^"]*"/', $sidebarMatch[1], $items);
+            preg_match_all('/<svg\b[^>]*aria-hidden="true"[^>]*>/', $sidebarMatch[1], $icons);
+            $this->assertNotEmpty($items[0]);
+            $this->assertCount(count($items[0]), $icons[0]);
+            $this->assertStringContainsString('class="nav-label"', $sidebarMatch[1]);
+            $this->assertStringContainsString('action="'.route('logout').'"', $sidebarMatch[1]);
+            $this->assertStringContainsString('method="POST"', $sidebarMatch[1]);
+            $this->assertStringContainsString('>Logout</span>', $sidebarMatch[1]);
+            $this->assertStringContainsString('>Dashboard</span>', $sidebarMatch[1]);
+            $this->assertStringContainsString('>Account Settings</span>', $sidebarMatch[1]);
+        }
+    }
+
+    public function test_unknown_navigation_icon_renders_neutral_fallback(): void
+    {
+        $html = view('components.nav-icon', ['name' => 'not-a-real-icon'])->render();
+
+        $this->assertStringContainsString('<svg', $html);
+        $this->assertStringContainsString('aria-hidden="true"', $html);
+        $this->assertStringContainsString('M9.5 9a2.5 2.5 0 1 1 4.4 1.6', $html);
+    }
+
+    public function test_admin_accounts_table_uses_readable_table_and_nowrap_headers(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get('/admin/accounts?type=student')->assertOk()
+            ->assertSee('class="table-readable w-full text-left text-sm"', false)
+            ->assertSee('class="cell-nowrap px-4 py-2"', false);
+    }
+
     /** Capture real rendered routes with isolated data, never a production login. */
     private function page(string $name, string $url, bool $workspace = true): void
     {

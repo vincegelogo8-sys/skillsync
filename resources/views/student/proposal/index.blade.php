@@ -37,6 +37,48 @@
                     </div>
                 @endif
 
+                @if ($admin)
+                    @php
+                        $filterParams = [...$filters, 'sort' => $sorting['sort'], 'dir' => $sorting['dir']];
+                    @endphp
+                    <div class="mt-6 space-y-4">
+                        <x-course-section-filter
+                            route="admin.proposals.index"
+                            :course="$filters['course']"
+                            :section="$filters['section']"
+                            :course-counts="$courseCounts"
+                            :section-counts="$sectionCounts"
+                            :all-course-count="$allCourseCount"
+                            :query-params="$filterParams"
+                        />
+                        <form method="GET" action="{{ route('admin.proposals.index') }}" class="flex flex-wrap items-end gap-3">
+                            @foreach (['course', 'section', 'sort', 'dir'] as $key)
+                                @if (($filterParams[$key] ?? null) !== null)
+                                    <input type="hidden" name="{{ $key }}" value="{{ $filterParams[$key] }}">
+                                @endif
+                            @endforeach
+                            <div>
+                                <x-input-label for="adviser" :value="__('Adviser')" />
+                                <select id="adviser" name="adviser" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                    <option value="">{{ __('All advisers') }}</option>
+                                    <option value="none" @selected($filters['adviser'] === 'none')>{{ __('No adviser yet') }}</option>
+                                    @foreach ($facultyOptions as $faculty)
+                                        <option value="{{ $faculty->id }}" @selected($filters['adviser'] === (string) $faculty->id)>{{ $faculty->user->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <button type="submit" class="button button-secondary">{{ __('Apply') }}</button>
+                        </form>
+                        <x-sort-controls
+                            route="admin.proposals.index"
+                            :options="$sortOptions"
+                            :sort="$sorting['sort']"
+                            :dir="$sorting['dir']"
+                            :query-params="$filterParams"
+                        />
+                    </div>
+                @endif
+
                 {{-- PROPOSALS --}}
                 <div class="mt-4 divide-y divide-gray-200">
 
@@ -54,10 +96,27 @@
                                 </h3>
 
                                 @if ($admin)
+                                    @php($studentProfile = $proposal->studentProfile)
                                     <p class="mt-1 text-sm text-gray-600 break-words">
-                                        {{ $proposal->studentProfile->user->name }}
-                                        ·
-                                        {{ $proposal->studentProfile->student_number }}
+                                        {{ $studentProfile?->user?->name ?? __('Former account') }}
+                                        @if ($studentProfile?->user && method_exists($studentProfile->user, 'isDeactivated') && $studentProfile->user->isDeactivated())
+                                            <x-status-badge status="inactive">{{ __('Inactive') }}</x-status-badge>
+                                        @endif
+                                        · {{ $studentProfile?->student_number ?? '—' }}
+                                        · {{ $studentProfile?->course ?? '—' }}
+                                        · {{ config('student_options.year_levels')[$studentProfile?->year_level] ?? '—' }}
+                                        · {{ $studentProfile?->section ?? '—' }}
+                                    </p>
+                                    <p class="mt-1 text-sm text-gray-600">
+                                        {{ __('Adviser') }}:
+                                        @if ($proposal->assignment?->facultyProfile?->user)
+                                            {{ $proposal->assignment->facultyProfile->user->name }}
+                                            @if (method_exists($proposal->assignment->facultyProfile->user, 'isDeactivated') && $proposal->assignment->facultyProfile->user->isDeactivated())
+                                                <x-status-badge status="inactive">{{ __('Inactive') }}</x-status-badge>
+                                            @endif
+                                        @else
+                                            <x-status-badge status="neutral">{{ __('No adviser yet') }}</x-status-badge>
+                                        @endif
                                     </p>
                                 @endif
 

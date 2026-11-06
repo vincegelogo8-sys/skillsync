@@ -156,12 +156,4 @@ class StudentProfileTest extends TestCase
             ->assertDontSee($course, false)->assertDontSee('<script>alert(2)</script>', false);
     }
 
-    public function test_account_deletion_also_removes_its_student_profile(): void
-    {
-        $student = User::factory()->create();
-        $student->studentProfile()->create($this->details());
-        $this->actingAs($student)->delete('/profile', ['password' => 'password'])->assertRedirect('/');
-
-        $this->assertDatabaseMissing('student_profiles', ['user_id' => $student->id]);
-    }
 }
