@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountController;
+use App\Http\Controllers\Admin\HistoryController;
 use App\Http\Controllers\AdviserAssignmentController;
 use App\Http\Controllers\AdviserRequestController;
 use App\Http\Controllers\AdvisoryThresholdController;
@@ -316,6 +317,12 @@ Route::middleware([
             [AdviserAssignmentController::class, 'index']
         )
             ->name('assignments.index');
+
+        Route::get(
+            '/history',
+            [HistoryController::class, 'index']
+        )
+            ->name('history.index');
 
         Route::get(
             '/advisory-limits',

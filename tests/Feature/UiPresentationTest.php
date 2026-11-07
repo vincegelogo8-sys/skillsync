@@ -40,12 +40,12 @@ class UiPresentationTest extends TestCase
     {
         $supported = [
             'dashboard', 'document', 'inbox', 'clipboard-check', 'graduation-cap',
-            'user', 'sparkles', 'users', 'sliders', 'cog', 'logout',
+            'user', 'sparkles', 'users', 'sliders', 'clock', 'cog', 'logout',
         ];
         $links = collect(config('workspace_navigation'))
             ->flatMap(fn (array $workspace) => [...$workspace['primary'], ...$workspace['secondary']]);
 
-        $this->assertCount(13, $links);
+        $this->assertCount(14, $links);
         foreach ($links as $link) {
             $this->assertArrayHasKey('icon', $link);
             $this->assertContains($link['icon'], $supported);
@@ -175,7 +175,7 @@ class UiPresentationTest extends TestCase
         $this->page('faculty-assigned-students', '/faculty/assignments');
 
         $this->actingAs($admin);
-        foreach (['dashboard', 'accounts', 'accounts/create', 'advisory-limits', 'proposals', 'requests', 'assignments'] as $path) {
+        foreach (['dashboard', 'accounts', 'accounts/create', 'advisory-limits', 'proposals', 'requests', 'assignments', 'history'] as $path) {
             $this->page('admin-'.str_replace('/', '-', $path), '/admin/'.$path);
         }
         $this->page('admin-limit-edit', '/admin/faculty/'.$facultyProfile->id.'/advisory-limit');

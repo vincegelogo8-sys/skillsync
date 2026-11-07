@@ -28,6 +28,7 @@ return [
             ['route' => 'admin.proposals.index', 'label' => 'Research Proposals', 'icon' => 'document', 'description' => 'Review student proposals, extracted text, and research concepts.', 'active' => ['admin.proposals.*']],
             ['route' => 'admin.requests.index', 'label' => 'Adviser Requests', 'icon' => 'inbox', 'description' => 'Monitor requests and faculty decisions.', 'active' => ['admin.requests.*']],
             ['route' => 'admin.assignments.index', 'label' => 'Adviser Assignments', 'icon' => 'clipboard-check', 'description' => 'Review final assignments and their approvers.', 'active' => ['admin.assignments.*']],
+            ['route' => 'admin.history.index', 'label' => 'History', 'icon' => 'clock', 'description' => 'Browse all proposals, students and faculty, separated by course.', 'active' => ['admin.history.*']],
         ],
         'secondary_label' => 'Management',
         'secondary' => [
