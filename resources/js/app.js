@@ -316,6 +316,10 @@ document.querySelectorAll('.landing-nav a[href^="#"]').forEach((link) => {
 document.addEventListener('submit', (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post' || event.defaultPrevented) return;
+    // This listener is registered before the confirmation one below, so it runs first and
+    // cannot see defaultPrevented yet. Leave forms that still await confirmation alone;
+    // they enter the busy state when the confirmed submit is re-dispatched.
+    if (confirmSettings(form) && form.dataset.confirmed !== '1') return;
     if (form.dataset.submitting === 'true') {
         event.preventDefault();
         return;
@@ -339,6 +343,10 @@ window.addEventListener('pageshow', () => {
     document.querySelectorAll('form[data-submitting]').forEach((form) => {
         delete form.dataset.submitting;
         form.removeAttribute('aria-busy');
+    });
+    // Back/forward cache restores the page as it was; require confirmation again.
+    document.querySelectorAll('form[data-confirmed]').forEach((form) => {
+        delete form.dataset.confirmed;
     });
     document.querySelectorAll('[data-original-text]').forEach((button) => {
         button.textContent = button.dataset.originalText;

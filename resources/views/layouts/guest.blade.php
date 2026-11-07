@@ -13,5 +13,6 @@
             <p class="guest-caption">{{ __('Research Adviser Recommendation System') }}</p>
             {{ $slot }}
         </main>
+        <x-confirm-dialog />
     </body>
 </html>

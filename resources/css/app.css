@@ -448,7 +448,8 @@ thead th { background: var(--accent-light); color: var(--accent-hover); }
 .sidebar .sidebar-collapse-toggle:focus-visible { outline-color: var(--gold); }
 
 /* Logout confirmation */
-.confirm-dialog { width: min(92vw, 400px); padding: 24px; border: 0; border-radius: 16px; background: #fff; color: var(--text-primary); box-shadow: 0 24px 60px rgba(7, 21, 68, .35); }
+/* The global `dialog` rule above sets border-radius with !important, so this one needs it too. */
+.confirm-dialog { width: min(92vw, 400px); padding: 24px; border: 0; border-radius: 16px !important; background: #fff; color: var(--text-primary); box-shadow: 0 24px 60px rgba(7, 21, 68, .35); }
 .confirm-dialog::backdrop { background: rgba(7, 21, 68, .55); }
 .confirm-dialog h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--navy); }
 .confirm-dialog p { margin: 0; font-size: 14px; color: var(--text-secondary); }
