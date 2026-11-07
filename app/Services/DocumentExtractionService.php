@@ -39,7 +39,7 @@ class DocumentExtractionService
         try {
             $text = match ($type) {
                 'pdf' => $this->pdf($path),
-                'docx' => $this->docx($path),
+                'docx' => app(DocumentBoilerplateStripper::class)->stripLetterhead($this->docx($path)),
                 default => throw new DocumentExtractionException(
                     'Only PDF and DOCX documents are supported.'
                 ),
@@ -64,7 +64,12 @@ class DocumentExtractionService
          *
          * This reduces differences caused only by file formatting.
          */
-        $text = $this->normalizeExtractedText($text);
+        $text = $this->normalizeExtractedText(
+            app(DocumentBoilerplateStripper::class)->dropSymbolOnlyLines($text)
+        );
+
+        // Everything before "Proposed Title" (group line, form headings) is not proposal content.
+        $text = app(DocumentBoilerplateStripper::class)->startAtProposedTitle($text);
 
         if (! preg_match('/[\p{L}\p{N}]/u', $text)) {
             throw new DocumentExtractionException(
@@ -103,9 +108,21 @@ class DocumentExtractionService
             32 * 1024 * 1024
         );
 
-        return (new Parser([], $config))
-            ->parseFile($path)
-            ->getText();
+        $document = (new Parser([], $config))->parseFile($path);
+
+        // Read page by page so repeated letterheads, headers, footers and
+        // page numbers can be recognised and removed.
+        $pages = [];
+
+        foreach ($document->getPages() as $page) {
+            $pages[] = $page->getText();
+        }
+
+        if ($pages === []) {
+            return $document->getText();
+        }
+
+        return app(DocumentBoilerplateStripper::class)->stripPages($pages);
     }
 
     private function docx(string $path): string
