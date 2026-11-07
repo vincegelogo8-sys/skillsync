@@ -206,6 +206,24 @@ class DashboardTest extends TestCase
         }
     }
 
+    public function test_view_all_popups_list_older_scoped_requests_and_assignments(): void
+    {
+        [, $faculty] = $this->activity('Older Own Item');
+        $this->activity('Other Faculty Item');
+        $old = now()->subDays(30);
+        AdviserRequest::query()->where('faculty_profile_id', $faculty->facultyProfile->id)->update(['requested_at' => $old, 'updated_at' => $old]);
+        AdviserAssignment::query()->where('faculty_profile_id', $faculty->facultyProfile->id)->update(['assigned_at' => $old, 'updated_at' => $old]);
+
+        $this->actingAs($faculty)->get('/faculty/dashboard')->assertOk()
+            ->assertViewHas('recentRequestGroups', [])
+            ->assertViewHas('allRequestsTotal', 1)
+            ->assertViewHas('allAssignmentsTotal', 1)
+            ->assertSee('id="all-requests-modal"', false)
+            ->assertSee('id="all-assignments-modal"', false)
+            ->assertSee('Older Own Item')
+            ->assertDontSee('Other Faculty Item');
+    }
+
     private function assertNoDashboardQuickSections(string $html): void
     {
         $document = new \DOMDocument;

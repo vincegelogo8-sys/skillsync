@@ -454,3 +454,14 @@ thead th { background: var(--accent-light); color: var(--accent-hover); }
 .confirm-dialog h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--navy); }
 .confirm-dialog p { margin: 0; font-size: 14px; color: var(--text-secondary); }
 .confirm-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* Scrollable "View all" pop-ups on the dashboard. Header and footer stay put; only the list scrolls.
+   display:flex is applied to [open] only, so a closed dialog stays hidden. */
+.list-modal { width: min(94vw, 720px); padding: 0; border: 0; border-radius: 16px !important; background: #fff; color: var(--text-primary); box-shadow: 0 24px 60px rgba(7, 21, 68, .35); }
+.list-modal::backdrop { background: rgba(7, 21, 68, .55); }
+.list-modal[open] { display: flex; flex-direction: column; max-height: min(86dvh, 720px); overflow: hidden; }
+.list-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px; border-bottom: 1px solid var(--border); }
+.list-modal-header h2 { margin: 0; font-size: 18px; font-weight: 700; color: var(--navy); }
+.list-modal-count { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+.list-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 24px 12px; }
+.list-modal-footer { padding: 12px 24px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-secondary); }

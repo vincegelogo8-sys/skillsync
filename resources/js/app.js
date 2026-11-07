@@ -13,6 +13,13 @@ document.querySelectorAll('dialog[data-show="true"]').forEach((dialog) => {
     dialog.showModal();
 });
 
+// Dashboard "View all" pop-ups: clicking the dimmed backdrop closes them.
+document.querySelectorAll('dialog.list-modal').forEach((dialog) => {
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+    });
+});
+
 const accountCheckboxes = [...document.querySelectorAll('[data-account-checkbox]')];
 const selectPageCheckbox = document.querySelector('[data-select-page]');
 const bulkActionBar = document.querySelector('[data-bulk-action-bar]');

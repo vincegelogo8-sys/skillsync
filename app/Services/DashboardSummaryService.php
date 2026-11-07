@@ -11,6 +11,9 @@ use Carbon\Carbon;
 
 class DashboardSummaryService
 {
+    /** Most rows the "View all" pop-ups load; the full pages remain available beyond this. */
+    private const POPUP_LIMIT = 300;
+
     public function forUser(User $user): array
     {
         abort_unless(in_array($user->role, User::ROLES, true), 403);
@@ -84,9 +87,40 @@ class DashboardSummaryService
             ? (clone $assignments)->where('assigned_at', '>=', $windowStartUtc)->with('researchProposal.studentProfile.user')->latest('assigned_at')->latest('id')->get()
             : collect();
 
+        // Full lists for the "View all" pop-ups, scoped exactly like the full pages:
+        // admins see everything, faculty see their own, students see their own.
+        $allRequestsQuery = (clone $requests);
+        if ($role === User::ROLE_STUDENT) {
+            // Same rule as AdviserRequestController::index: requests closed because another
+            // adviser accepted the proposal are hidden from the student.
+            $allRequestsQuery->where(fn ($query) => $query->where('status', '!=', 'cancelled')
+                ->orWhereDoesntHave('researchProposal.assignment', fn ($assignment) => $assignment->where('status', AdviserAssignment::STATUS_ACTIVE)));
+        }
+        $allRequestsTotal = (clone $allRequestsQuery)->count();
+        $allRequests = $allRequestsQuery
+            ->with(['researchProposal', 'facultyProfile.user', 'studentProfile.user'])
+            ->latest('id')
+            ->limit(self::POPUP_LIMIT)
+            ->get();
+        $allAssignmentsTotal = $role === User::ROLE_FACULTY ? (clone $assignments)->count() : 0;
+        $allAssignments = $role === User::ROLE_FACULTY
+            ? (clone $assignments)->with('researchProposal.studentProfile.user')->latest('assigned_at')->latest('id')->limit(self::POPUP_LIMIT)->get()
+            : collect();
+
+        $allProposalsTotal = $role === User::ROLE_FACULTY ? 0 : (clone $proposals)->count();
+        $allProposals = $role === User::ROLE_FACULTY
+            ? collect()
+            : (clone $proposals)->with('studentProfile.user')->latest('created_at')->latest('id')->limit(self::POPUP_LIMIT)->get();
+
         return [
             'role' => $role, 'roleLabel' => ucfirst($role), 'profileReady' => $role === User::ROLE_ADMIN || $profile !== null,
             'metrics' => $metrics,
+            'allProposals' => $allProposals,
+            'allProposalsTotal' => $allProposalsTotal,
+            'allRequests' => $allRequests,
+            'allRequestsTotal' => $allRequestsTotal,
+            'allAssignments' => $allAssignments,
+            'allAssignmentsTotal' => $allAssignmentsTotal,
             'recentRequestGroups' => ActivityGroups::make($recentRequests, function (AdviserRequest $request) {
                 $timestamps = collect([$request->requested_at, $request->responded_at])->filter();
 

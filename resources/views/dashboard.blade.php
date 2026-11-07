@@ -26,7 +26,7 @@
         </dl>
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section class="rounded-lg bg-white p-6 shadow-sm">
-                <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-lg font-semibold text-gray-900">{{ __('Recent Requests') }}</h3><a href="{{ route($role.'.requests.index') }}" class="text-sm text-indigo-600 underline">{{ __('View all requests') }}</a></div>
+                <div class="flex flex-wrap items-center justify-between gap-2"><h3 class="text-lg font-semibold text-gray-900">{{ __('Recent Requests') }}</h3><button type="button" class="cursor-pointer text-sm text-indigo-600 underline" data-open-modal="all-requests-modal" aria-haspopup="dialog">{{ __('View all requests') }}</button></div>
                 <ul class="mt-4 divide-y divide-gray-100">
                     @forelse ($recentRequestGroups as $group)
                         <li class="py-3">
@@ -53,7 +53,11 @@
             <section class="rounded-lg bg-white p-6 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h3 class="text-lg font-semibold text-gray-900">{{ $role === 'faculty' ? __('Recent Assignments') : __('Recent Proposals') }}</h3>
-                    <a href="{{ route($role.'.'.($role === 'faculty' ? 'assignments' : 'proposals').'.index') }}" class="text-sm text-indigo-600 underline">{{ $role === 'faculty' ? __('View all assignments') : __('View all proposals') }}</a>
+                    @if ($role === 'faculty')
+                        <button type="button" class="cursor-pointer text-sm text-indigo-600 underline" data-open-modal="all-assignments-modal" aria-haspopup="dialog">{{ __('View all assignments') }}</button>
+                    @else
+                        <button type="button" class="cursor-pointer text-sm text-indigo-600 underline" data-open-modal="all-proposals-modal" aria-haspopup="dialog">{{ __('View all proposals') }}</button>
+                    @endif
                 </div>
                 <ul class="mt-4 divide-y divide-gray-100">
                     @if ($role === 'faculty')
@@ -105,4 +109,69 @@
             </section>
         </div>
     </div></div>
+
+    <x-list-modal id="all-requests-modal" :title="__('All Requests')" :total="$allRequestsTotal" :shown="$allRequests->count()" :full-url="route($role.'.requests.index')" :full-label="__('Open the full requests page')">
+        <ul class="divide-y divide-gray-100">
+            @forelse ($allRequests as $entry)
+                @php($at = collect([$entry->requested_at, $entry->responded_at])->filter()->max() ?? $entry->updated_at)
+                <li class="py-3">
+                    <p class="font-medium text-gray-900 break-words">{{ $entry->researchProposal->title }}</p>
+                    <p class="mt-1 text-sm text-gray-600">
+                        @if ($role === 'admin')
+                            {{ $entry->studentProfile->user->name }} → {{ $entry->facultyProfile->user->name }}
+                        @else
+                            {{ $role === 'student' ? $entry->facultyProfile->user->name : $entry->studentProfile->user->name }}
+                        @endif
+                        · <x-status-badge :status="$entry->status" />
+                        · <time datetime="{{ $at->toIso8601String() }}">{{ $at->copy()->timezone(config('app.display_timezone', 'Asia/Manila'))->format('M j, Y g:i A') }}</time>
+                    </p>
+                </li>
+            @empty
+                <li class="py-3"><x-empty-state title="{{ __('No adviser requests yet.') }}" /></li>
+            @endforelse
+        </ul>
+    </x-list-modal>
+
+    @if ($role !== 'faculty')
+        <x-list-modal id="all-proposals-modal" :title="__('All Proposals')" :total="$allProposalsTotal" :shown="$allProposals->count()" :full-url="route($role.'.proposals.index')" :full-label="__('Open the full proposals page')">
+            <ul class="divide-y divide-gray-100">
+                @forelse ($allProposals as $entry)
+                    <li class="py-3">
+                        <a href="{{ route($role.'.proposals.show', $entry) }}" class="font-medium text-indigo-600 underline break-words">{{ $entry->title }}</a>
+                        <p class="mt-1 text-sm text-gray-600">
+                            @if ($role === 'admin')
+                                {{ __('Uploaded by :name', ['name' => $entry->studentProfile->user->name]) }} ·
+                            @else
+                                {{ __('Uploaded') }}
+                            @endif
+                            <time datetime="{{ $entry->created_at->toIso8601String() }}">{{ $entry->created_at->copy()->timezone(config('app.display_timezone', 'Asia/Manila'))->format('M j, Y g:i A') }}</time>
+                        </p>
+                    </li>
+                @empty
+                    <li class="py-3"><x-empty-state title="{{ __('No proposals yet.') }}" /></li>
+                @endforelse
+            </ul>
+        </x-list-modal>
+    @endif
+
+    @if ($role === 'faculty')
+        <x-list-modal id="all-assignments-modal" :title="__('All Assignments')" :total="$allAssignmentsTotal" :shown="$allAssignments->count()" :full-url="route('faculty.assignments.index')" :full-label="__('Open the full assignments page')">
+            <ul class="divide-y divide-gray-100">
+                @forelse ($allAssignments as $entry)
+                    <li class="py-3">
+                        <p class="font-medium text-gray-900 break-words">{{ $entry->researchProposal->title }}</p>
+                        <p class="mt-1 text-sm text-gray-600">
+                            {{ $entry->researchProposal->studentProfile->user->name }}
+                            · <x-status-badge :status="$entry->status" />
+                            @if ($entry->assigned_at)
+                                · <time datetime="{{ $entry->assigned_at->toIso8601String() }}">{{ $entry->assigned_at->copy()->timezone(config('app.display_timezone', 'Asia/Manila'))->format('M j, Y g:i A') }}</time>
+                            @endif
+                        </p>
+                    </li>
+                @empty
+                    <li class="py-3"><x-empty-state title="{{ __('No adviser assignments yet.') }}" /></li>
+                @endforelse
+            </ul>
+        </x-list-modal>
+    @endif
 </x-app-layout>
