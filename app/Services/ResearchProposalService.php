@@ -22,6 +22,18 @@ class ResearchProposalService
         $fileHash = ProposalFingerprint::fileHash($file);
         $titleKey = ProposalFingerprint::titleKey($title);
 
+        // Cannot upload a proposal that another student has already submitted.
+        $otherStudentMessages = [];
+        if (ResearchProposal::submittedByAnotherStudent($profile, 'file_hash', $fileHash)) {
+            $otherStudentMessages['document'] = ResearchProposal::OTHER_STUDENT_DOCUMENT_MESSAGE;
+        }
+        if ($titleKey !== '' && ResearchProposal::submittedByAnotherStudent($profile, 'title_key', $titleKey)) {
+            $otherStudentMessages['title'] = ResearchProposal::OTHER_STUDENT_TITLE_MESSAGE;
+        }
+        if ($otherStudentMessages !== []) {
+            throw ValidationException::withMessages($otherStudentMessages);
+        }
+
         try {
             $extension = strtolower($file->getClientOriginalExtension());
             $path = Str::uuid().'.'.$extension;

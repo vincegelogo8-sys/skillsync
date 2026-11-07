@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\ResearchProposal;
 use App\Models\User;
 use App\Rules\ProposalDocument;
 use App\Support\ProposalFingerprint;
@@ -66,8 +67,19 @@ class ResearchProposalRequest extends FormRequest
                 );
             }
 
-            if ($titleKey !== null && $profile->researchProposals()->where('title_key', $titleKey)->exists()) {
+            $ownTitleDuplicate = $titleKey !== null && $profile->researchProposals()->where('title_key', $titleKey)->exists();
+            if ($ownTitleDuplicate) {
                 $validator->errors()->add('title', 'You already have a proposal with this title.');
+            }
+
+            // A proposal already submitted by a different student (another group) cannot be submitted again.
+            // The message never says who submitted it.
+            if (! $duplicateFile && ResearchProposal::submittedByAnotherStudent($profile, 'file_hash', $fileHash)) {
+                $validator->errors()->add('document', ResearchProposal::OTHER_STUDENT_DOCUMENT_MESSAGE);
+            }
+
+            if ($titleKey !== null && ! $ownTitleDuplicate && ResearchProposal::submittedByAnotherStudent($profile, 'title_key', $titleKey)) {
+                $validator->errors()->add('title', ResearchProposal::OTHER_STUDENT_TITLE_MESSAGE);
             }
         });
     }

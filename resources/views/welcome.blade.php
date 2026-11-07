@@ -19,7 +19,7 @@
                     <x-skillsync-mark alt="" />
                     <span>
                         <span class="landing-brand-name"><strong>SKILL</strong>SYNC</span>
-                        <span class="landing-brand-note">Research Adviser Recommendations</span>
+                        <span class="landing-brand-note">Automated Adviser Recommendation</span>
                     </span>
                 </a>
                 <nav class="landing-nav" aria-label="Main navigation">
@@ -36,23 +36,32 @@
 
             <div id="main-content" class="landing-copy landing-container" tabindex="-1">
                 <h1>Match students with research advisers</h1>
-                <p>SKILLSYNC connects student research with faculty skills through category matching. Explore adviser recommendations based on research topic alignment&mdash;with acceptance by the requested adviser.</p>
+                <p>SKILLSYNC automates the assignment of faculty advisers to student research groups using intelligent matching. The system considers expertise, workload, and research focus to create optimal pairings.</p>
             </div>
         </div>
 
         <main>
             <section class="landing-features landing-container" aria-label="How SKILLSYNC supports your research">
                 <article class="landing-card">
-                    <h2>Research Topic Submission</h2>
-                    <p>Bring your research idea forward. Submit a proposal to identify the skills your project needs.</p>
+                    <span class="landing-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h11l6 6v20H8z"/><path d="M19 3v6h6"/><path d="M12 14h9M12 18h9M12 22h6"/></svg>
+                    </span>
+                    <h2>Research Topic Submission Form</h2>
+                    <p>Web-system for submitting their capstone topic.</p>
                 </article>
                 <article class="landing-card">
-                    <h2>Skills-Based Recommendations</h2>
-                    <p>Discover faculty whose strengths align with your topic, with clear scores to guide your decision.</p>
+                    <span class="landing-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="14" height="14" rx="2"/><path d="M13 13h6v6h-6z"/><path d="M12 5v4M16 5v4M20 5v4M12 23v4M16 23v4M20 23v4M5 12h4M5 16h4M5 20h4M23 12h4M23 16h4M23 20h4"/></svg>
+                    </span>
+                    <h2>Accurate Recommendation</h2>
+                    <p>Precise research adviser recommender.</p>
                 </article>
                 <article class="landing-card">
+                    <span class="landing-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5v21M10 26h12M6 9h20"/><path d="M6 9 2 18a4 4 0 0 0 8 0zM26 9l-4 9a4 4 0 0 0 8 0z"/></svg>
+                    </span>
                     <h2>Balanced Advisory Responsibilities</h2>
-                    <p>See adviser availability alongside suitability. Capacity limits support manageable advising loads.</p>
+                    <p>Workload caps ensure advisers can provide quality mentorship without overcommitment.</p>
                 </article>
             </section>
 

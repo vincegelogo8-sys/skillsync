@@ -7,7 +7,7 @@
         <title>SKILLSYNC | Portal</title>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="guest-page antialiased">
+    <body class="guest-page antialiased" style="--guest-photo: url('{{ asset('images/campus-hero.png') }}')">
         <main class="login-card">
             <a href="{{ url('/') }}" class="guest-brand"><x-application-logo /> <span>SKILLSYNC</span></a>
             <p class="guest-caption">{{ __('Research Adviser Recommendation System') }}</p>
