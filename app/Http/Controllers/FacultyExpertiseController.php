@@ -16,16 +16,23 @@ class FacultyExpertiseController extends Controller
             return $this->completeProfile();
         }
 
+        $entries = $request->profile()->expertise()
+            ->whereIn('expertise_area', config('expertise.areas'))
+            ->orderBy('expertise_area')->get();
+
         return view('faculty.expertise.index', $this->viewData($request) + [
-            'entries' => $request->profile()->expertise()
-                ->whereIn('expertise_area', config('expertise.areas'))
-                ->orderBy('expertise_area')->get(),
+            'entries' => $entries,
+            'otherSpecify' => (string) $entries->firstWhere('expertise_area', config('expertise.other'))?->technical_skills,
         ]);
     }
 
     public function updateSkills(FacultyExpertiseRequest $request, FacultyExpertiseService $service): RedirectResponse
     {
-        $service->saveCategories($request->profile(), $request->validated('skills', []));
+        $service->saveCategories(
+            $request->profile(),
+            $request->validated('skills', []),
+            $request->validated('other_specify'),
+        );
 
         return redirect()->route('faculty.expertise.index')->with('status', 'faculty-skills-updated');
     }
@@ -70,7 +77,8 @@ class FacultyExpertiseController extends Controller
             'profile' => $request->profile(),
             'canUpdateSkills' => $isFaculty,
             'isFaculty' => $isFaculty,
-            'areas' => config('expertise.areas'),
+            'areas' => array_values(array_diff(config('expertise.areas'), [config('expertise.other')])),
+            'otherArea' => config('expertise.other'),
             'routePrefix' => 'faculty.expertise.',
             'routeParameters' => [],
         ];

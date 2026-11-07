@@ -32,8 +32,13 @@ class FacultyExpertiseRequest extends FormRequest
     {
         if ($this->routeIs('faculty.expertise.skills.update')) {
             return [
-                'skills' => ['required', 'array', 'min:1', 'max:9'],
+                'skills' => ['required', 'array', 'min:1', 'max:'.count(config('expertise.areas'))],
                 'skills.*' => ['required', 'string', 'distinct', Rule::in(config('expertise.areas'))],
+                // "Others" must say what the skill is, so it can be matched against proposals.
+                'other_specify' => [
+                    Rule::requiredIf(fn () => in_array(config('expertise.other'), (array) $this->input('skills', []), true)),
+                    'nullable', 'string', 'min:2', 'max:255',
+                ],
             ];
         }
 
@@ -53,7 +58,7 @@ class FacultyExpertiseRequest extends FormRequest
         }
 
         return [
-            'expertise_area' => ['required', 'string', Rule::in(config('expertise.areas')), $unique],
+            'expertise_area' => ['required', 'string', Rule::in(array_values(array_diff(config('expertise.areas'), [config('expertise.other')]))), $unique],
         ];
     }
 
@@ -61,8 +66,11 @@ class FacultyExpertiseRequest extends FormRequest
     {
         return [
             'expertise_area.required' => 'Select a faculty skill category.',
-            'expertise_area.in' => 'Select one of the nine supported faculty skill categories.',
+            'expertise_area.in' => 'Select one of the supported faculty skill categories.',
             'expertise_area.unique' => 'This faculty skill is already listed.',
+            'other_specify.required' => 'Please specify your skill when "Others" is selected.',
+            'other_specify.min' => 'Please describe your skill in at least 2 characters.',
+            'other_specify.max' => 'Please keep the specified skill under 255 characters.',
             'skills.min' => 'Select at least one supported faculty skill category.',
             'skills.*.in' => 'Select only one of the supported faculty skill categories.',
         ];

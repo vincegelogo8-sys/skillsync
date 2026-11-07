@@ -129,6 +129,8 @@ const overlay = document.querySelector('[data-sidebar-overlay]');
 const appMain = document.querySelector('.app-main');
 const mobileViewport = window.matchMedia('(max-width: 900px)');
 const sidebarToggleLabel = menuButton?.querySelector('[data-sidebar-toggle-label]');
+// Desktop collapse/expand button, inside the sidebar above Dashboard.
+const collapseButton = document.querySelector('[data-sidebar-collapse]');
 const sidebarPreferenceKey = 'skillsync.sidebar';
 
 function readSidebarPreference() {
@@ -149,8 +151,12 @@ function writeSidebarPreference(preference) {
 
 function updateDesktopSidebarToggle() {
     const collapsed = document.documentElement.classList.contains('sidebar-collapsed');
-    menuButton.setAttribute('aria-expanded', String(!collapsed));
-    if (sidebarToggleLabel) sidebarToggleLabel.textContent = collapsed ? 'Expand menu' : 'Collapse menu';
+    if (collapseButton) collapseButton.setAttribute('aria-expanded', String(!collapsed));
+    if (collapseButton) {
+        const text = collapsed ? 'Expand menu' : 'Collapse menu';
+        collapseButton.setAttribute('aria-label', text);
+        collapseButton.setAttribute('title', text);
+    }
     updateSidebarTitles(collapsed);
 }
 
@@ -200,15 +206,17 @@ function closeMobileSidebar(restoreFocus = true) {
     if (mobileViewport.matches) syncSidebarState();
 }
 
+collapseButton?.addEventListener('click', () => {
+    if (mobileViewport.matches) return;
+    const collapsed = !document.documentElement.classList.contains('sidebar-collapsed');
+    document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+    writeSidebarPreference(collapsed ? 'collapsed' : 'expanded');
+    updateDesktopSidebarToggle();
+    collapseButton.focus();
+});
+
 menuButton?.addEventListener('click', () => {
-    if (!mobileViewport.matches) {
-        const collapsed = !document.documentElement.classList.contains('sidebar-collapsed');
-        document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
-        writeSidebarPreference(collapsed ? 'collapsed' : 'expanded');
-        updateDesktopSidebarToggle();
-        menuButton.focus();
-        return;
-    }
+    if (!mobileViewport.matches) return; // desktop uses the collapse button inside the sidebar
 
     if (sidebar.classList.contains('is-open')) {
         closeMobileSidebar();
@@ -341,3 +349,27 @@ window.addEventListener('pageshow', () => {
         delete button.dataset.busyDisabled;
     });
 });
+
+// Ask before logging out (every logout form in the workspace layout).
+const logoutDialog = document.getElementById('logout-confirm');
+if (logoutDialog && typeof logoutDialog.showModal === 'function') {
+    let pendingLogoutForm = null;
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !/\/logout\/?$/.test(form.getAttribute('action') || '')) return;
+        if (form.dataset.logoutConfirmed === '1') return;
+        event.preventDefault();
+        pendingLogoutForm = form;
+        closeDropdowns();
+        logoutDialog.showModal();
+        logoutDialog.querySelector('[data-logout-cancel]').focus();
+    });
+    logoutDialog.querySelector('[data-logout-cancel]').addEventListener('click', () => logoutDialog.close());
+    logoutDialog.querySelector('[data-logout-confirm]').addEventListener('click', () => {
+        if (!pendingLogoutForm) return;
+        pendingLogoutForm.dataset.logoutConfirmed = '1';
+        pendingLogoutForm.requestSubmit();
+    });
+    logoutDialog.addEventListener('click', (event) => { if (event.target === logoutDialog) logoutDialog.close(); });
+    logoutDialog.addEventListener('close', () => { pendingLogoutForm = null; });
+}

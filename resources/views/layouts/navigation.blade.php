@@ -5,6 +5,12 @@
 <aside id="workspace-sidebar" class="sidebar" aria-label="{{ __('Workspace navigation') }}" tabindex="-1">
     <div class="sidebar-brand-row">
         <a href="{{ route('dashboard') }}" class="sidebar-brand"><x-skillsync-mark alt="" /> <span>SKILLSYNC</span></a>
+        {{-- Desktop only: icon-only collapse/expand. On phones the top bar "Menu" button opens the sidebar. --}}
+        <button type="button" class="sidebar-collapse-toggle" aria-controls="workspace-sidebar" aria-expanded="true" aria-label="{{ __('Collapse menu') }}" title="{{ __('Collapse menu') }}" data-sidebar-collapse>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />
+            </svg>
+        </button>
         <button type="button" class="button button-secondary sidebar-close" data-sidebar-close>{{ __('Close') }}</button>
     </div>
     <p class="sidebar-caption">{{ ucfirst($role) }} {{ __('Workspace') }}</p>

@@ -63,7 +63,7 @@ class FacultyExpertiseTest extends TestCase
             ->assertSee('name="skills[]"', false)
             ->assertDontSee('technical_skills')
             ->assertDontSee('faculty_profile_id');
-        $this->assertSame(9, substr_count($page->getContent(), 'name="skills[]"'));
+        $this->assertSame(41, substr_count($page->getContent(), 'name="skills[]"')); // 40 categories + Others
 
         $this->put('/faculty/expertise', [
             'skills' => ['Web Development', 'Networking'],
@@ -152,5 +152,25 @@ class FacultyExpertiseTest extends TestCase
         ], config('expertise.areas'));
         $this->actingAs(User::factory()->create(['role' => User::ROLE_STUDENT]))->get('/student/dashboard')
             ->assertDontSee(route('faculty.expertise.index'));
+    }
+
+    public function test_others_requires_a_specified_skill_and_saves_it(): void
+    {
+        $faculty = $this->faculty();
+
+        $this->actingAs($faculty)->put('/faculty/expertise', ['skills' => ['Others']])
+            ->assertSessionHasErrors('other_specify');
+        $this->assertDatabaseCount('faculty_expertise', 0);
+
+        $this->put('/faculty/expertise', ['skills' => ['Web Development', 'Others'], 'other_specify' => 'Quantum Computing; bioinformatics, Quantum Computing'])
+            ->assertRedirect('/faculty/expertise')->assertSessionHasNoErrors();
+
+        $others = $faculty->facultyProfile->expertise()->where('expertise_area', 'Others')->first();
+        $this->assertSame('Quantum Computing, bioinformatics', $others->technical_skills);
+        $this->get('/faculty/expertise')->assertSee('Others: Quantum Computing, bioinformatics');
+
+        // Unchecking Others removes it.
+        $this->put('/faculty/expertise', ['skills' => ['Web Development']])->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('faculty_expertise', ['expertise_area' => 'Others']);
     }
 }

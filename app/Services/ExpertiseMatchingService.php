@@ -100,6 +100,24 @@ class ExpertiseMatchingService
             }
         }
 
+        // "Others": terms the faculty typed themselves are matched directly against the proposal text.
+        $evidence = mb_strtolower($proposalText.' '.(is_array($analysis->technologies) ? implode(' ', array_filter($analysis->technologies, 'is_string')) : ''));
+        foreach ($faculty->expertise as $entry) {
+            if ($entry->expertise_area !== config('expertise.other') || blank($entry->technical_skills)) {
+                continue;
+            }
+            foreach (FacultyExpertiseService::otherTerms($entry->technical_skills) as $term) {
+                if ($this->contains($evidence, $term)) {
+                    $matches[] = [
+                        'area' => 'Others: '.$term,
+                        'category' => config('expertise.other'),
+                        'match_type' => 'direct',
+                        'explanation' => "The proposal mentions \"{$term}\", which this faculty member listed under Others in their faculty skills.",
+                    ];
+                }
+            }
+        }
+
         return $matches;
     }
 
