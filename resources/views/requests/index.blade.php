@@ -43,19 +43,19 @@
                         @if ($role === 'student')<a href="{{ route('student.recommendations.index', $adviserRequest->researchProposal) }}" class="text-sm text-indigo-600 underline">{{ __('View recommendations') }}</a>@endif
                         @if ($role === 'admin')<a href="{{ route('admin.proposals.show', $adviserRequest->researchProposal) }}" class="text-sm text-indigo-600 underline">{{ __('View proposal') }}</a>@endif
                         @if ($role === 'student' && $adviserRequest->status === 'cancelled')
-                            <form method="POST" action="{{ route('student.requests.destroy', $adviserRequest) }}" onsubmit="return confirm('Remove this cancelled adviser request from your list? Its history will be retained.');">
+                            <form method="POST" action="{{ route('student.requests.destroy', $adviserRequest) }}" data-confirm="Remove this cancelled adviser request from your list? Its history will be retained." data-confirm-title="Remove request?" data-confirm-button="Yes, remove" data-confirm-tone="danger">
                                 @csrf @method('DELETE')
                                 <x-danger-button>{{ __('Delete Request') }}</x-danger-button>
                             </form>
                         @endif
                         @if ($adviserRequest->status === 'pending' && $role !== 'admin')
                             @if ($role === 'faculty')
-                                <form method="POST" action="{{ route('faculty.requests.approve', $adviserRequest) }}" onsubmit="return confirm('Accept this request and become the assigned adviser?');">
+                                <form method="POST" action="{{ route('faculty.requests.approve', $adviserRequest) }}" data-confirm="Accept this request and become the assigned adviser?" data-confirm-title="Accept request?" data-confirm-button="Yes, accept" data-confirm-tone="primary">
                                     @csrf
                                     <x-primary-button class="button-success">{{ __('Accept Request') }}</x-primary-button>
                                 </form>
                             @endif
-                            <form method="POST" action="{{ route($role.'.requests.'.($role === 'student' ? 'cancel' : 'decline'), $adviserRequest) }}" onsubmit="return confirm('Close this adviser request?');">
+                            <form method="POST" action="{{ route($role.'.requests.'.($role === 'student' ? 'cancel' : 'decline'), $adviserRequest) }}" data-confirm="Close this adviser request?" data-confirm-title="Close request?" data-confirm-button="Yes, close request" data-confirm-tone="danger">
                                 @csrf @method('PATCH')
                                 <x-danger-button>{{ $role === 'student' ? __('Cancel Request') : __('Decline Request') }}</x-danger-button>
                             </form>

@@ -250,7 +250,7 @@
                     <form
                         method="POST"
                         action="{{ route(($admin ? 'admin' : 'student').'.proposals.refresh-extraction', $proposal) }}"
-                        onsubmit="return confirm('Re-extract and reanalyze this proposal? Existing recommendations will be updated.');"
+                        data-confirm="Re-extract and reanalyze this proposal? Existing recommendations will be updated." data-confirm-title="Re-analyze proposal?" data-confirm-button="Yes, re-analyze" data-confirm-tone="primary"
                     >
                         @csrf
 
@@ -269,7 +269,7 @@
                             <form
                                 method="POST"
                                 action="{{ route('student.proposals.destroy', $proposal) }}"
-                                onsubmit="return confirm('Are you sure you want to permanently delete this proposal? The uploaded document, analysis, recommendations, and related adviser requests will also be deleted. This action cannot be undone.');"
+                                data-confirm="Are you sure you want to permanently delete this proposal? The uploaded document, analysis, recommendations, and related adviser requests will also be deleted. This action cannot be undone." data-confirm-title="Delete proposal?" data-confirm-button="Yes, delete" data-confirm-tone="danger"
                             >
                                 @csrf
                                 @method('DELETE')

@@ -44,12 +44,12 @@
                 </main>
             </div>
         </div>
-        <dialog id="logout-confirm" class="confirm-dialog" aria-labelledby="logout-confirm-title" aria-describedby="logout-confirm-text">
-            <h2 id="logout-confirm-title">{{ __('Log out of SKILLSYNC?') }}</h2>
-            <p id="logout-confirm-text">{{ __('You will need to sign in again to continue.') }}</p>
+        <dialog id="app-confirm" class="confirm-dialog" aria-labelledby="app-confirm-title" aria-describedby="app-confirm-text">
+            <h2 id="app-confirm-title"></h2>
+            <p id="app-confirm-text"></p>
             <div class="confirm-dialog-actions">
-                <button type="button" class="button button-secondary" data-logout-cancel>{{ __('Cancel') }}</button>
-                <button type="button" class="button button-danger" data-logout-confirm>{{ __('Yes, log out') }}</button>
+                <button type="button" class="button button-secondary" data-confirm-cancel>{{ __('Cancel') }}</button>
+                <button type="button" class="button button-primary" data-confirm-ok></button>
             </div>
         </dialog>
     </body>

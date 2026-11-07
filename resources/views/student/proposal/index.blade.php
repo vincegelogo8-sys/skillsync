@@ -16,7 +16,7 @@
                 {{-- HEADER --}}
                 <div class="flex flex-wrap items-center justify-between gap-4">
 
-                    @unless ($admin || ($hasAdviser ?? false))
+                    @unless ($admin)
                         <a
                             href="{{ route('student.proposals.create') }}"
                             class=" button button-primary"
@@ -26,25 +26,6 @@
                     @endunless
 
                 </div>
-
-                {{-- UPLOAD LOCKED: STUDENT ALREADY HAS AN ADVISER --}}
-                @if (! $admin && ($hasAdviser ?? false))
-                    <div
-                        role="status"
-                        class="ui-alert mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800"
-                    >
-                        {{ __('You already have an assigned adviser, so you cannot upload another proposal.') }}
-                    </div>
-                @endif
-
-                @if (session('status') === 'proposal-upload-blocked')
-                    <div
-                        role="alert"
-                        class="ui-alert mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
-                    >
-                        {{ __('Upload blocked: you already have an assigned adviser.') }}
-                    </div>
-                @endif
 
                 {{-- DELETE SUCCESS --}}
                 @if (session('status') === 'proposal-deleted')
@@ -169,7 +150,7 @@
                                     <form
                                         method="POST"
                                         action="{{ route('student.proposals.destroy', $proposal) }}"
-                                        onsubmit="return confirm('Are you sure you want to permanently delete this proposal? The uploaded document and its related analysis and recommendation data will also be deleted.');"
+                                        data-confirm="Are you sure you want to permanently delete this proposal? The uploaded document and its related analysis and recommendation data will also be deleted." data-confirm-title="Delete proposal?" data-confirm-button="Yes, delete" data-confirm-tone="danger"
                                     >
                                         @csrf
                                         @method('DELETE')

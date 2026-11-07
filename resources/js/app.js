@@ -350,26 +350,58 @@ window.addEventListener('pageshow', () => {
     });
 });
 
-// Ask before logging out (every logout form in the workspace layout).
-const logoutDialog = document.getElementById('logout-confirm');
-if (logoutDialog && typeof logoutDialog.showModal === 'function') {
-    let pendingLogoutForm = null;
-    document.addEventListener('submit', (event) => {
-        const form = event.target;
-        if (!(form instanceof HTMLFormElement) || !/\/logout\/?$/.test(form.getAttribute('action') || '')) return;
-        if (form.dataset.logoutConfirmed === '1') return;
-        event.preventDefault();
-        pendingLogoutForm = form;
-        closeDropdowns();
-        logoutDialog.showModal();
-        logoutDialog.querySelector('[data-logout-cancel]').focus();
-    });
-    logoutDialog.querySelector('[data-logout-cancel]').addEventListener('click', () => logoutDialog.close());
-    logoutDialog.querySelector('[data-logout-confirm]').addEventListener('click', () => {
-        if (!pendingLogoutForm) return;
-        pendingLogoutForm.dataset.logoutConfirmed = '1';
-        pendingLogoutForm.requestSubmit();
-    });
-    logoutDialog.addEventListener('click', (event) => { if (event.target === logoutDialog) logoutDialog.close(); });
-    logoutDialog.addEventListener('close', () => { pendingLogoutForm = null; });
+// Styled confirmation dialog. Replaces the browser's "127.0.0.1 says..." pop-ups.
+// Add data-confirm="message" to a form (optional: data-confirm-title, data-confirm-button, data-confirm-tone="danger|primary").
+// Logout forms are confirmed automatically.
+const confirmDialog = document.getElementById('app-confirm');
+const confirmTitle = document.getElementById('app-confirm-title');
+const confirmText = document.getElementById('app-confirm-text');
+const confirmOk = confirmDialog?.querySelector('[data-confirm-ok]');
+const confirmCancel = confirmDialog?.querySelector('[data-confirm-cancel]');
+let pendingConfirmForm = null;
+
+function confirmSettings(form) {
+    if (form.dataset.confirm) {
+        return {
+            title: form.dataset.confirmTitle || 'Are you sure?',
+            text: form.dataset.confirm,
+            button: form.dataset.confirmButton || 'Yes, continue',
+            tone: form.dataset.confirmTone || 'primary',
+        };
+    }
+    if (/\/logout\/?$/.test(form.getAttribute('action') || '')) {
+        return { title: 'Log out of SKILLSYNC?', text: 'You will need to sign in again to continue.', button: 'Yes, log out', tone: 'danger' };
+    }
+    return null;
 }
+
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.dataset.confirmed === '1') return;
+    const settings = confirmSettings(form);
+    if (!settings) return;
+    event.preventDefault();
+
+    if (!confirmDialog || typeof confirmDialog.showModal !== 'function') {
+        // Very old browser: fall back to the built-in prompt instead of skipping the confirmation.
+        if (window.confirm(settings.text)) { form.dataset.confirmed = '1'; form.requestSubmit(); }
+        return;
+    }
+    pendingConfirmForm = form;
+    closeDropdowns();
+    confirmTitle.textContent = settings.title;
+    confirmText.textContent = settings.text;
+    confirmOk.textContent = settings.button;
+    confirmOk.className = 'button ' + (settings.tone === 'danger' ? 'button-danger' : 'button-primary');
+    confirmDialog.showModal();
+    confirmCancel.focus();
+});
+
+confirmCancel?.addEventListener('click', () => confirmDialog.close());
+confirmOk?.addEventListener('click', () => {
+    if (!pendingConfirmForm) return;
+    pendingConfirmForm.dataset.confirmed = '1';
+    pendingConfirmForm.requestSubmit();
+});
+confirmDialog?.addEventListener('click', (event) => { if (event.target === confirmDialog) confirmDialog.close(); });
+confirmDialog?.addEventListener('close', () => { pendingConfirmForm = null; });
