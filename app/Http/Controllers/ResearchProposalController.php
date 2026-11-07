@@ -44,6 +44,7 @@ class ResearchProposalController extends Controller
             return view('student.proposal.index', [
                 'proposals' => $request->user()->studentProfile->researchProposals()->latest('id')->paginate(15),
                 'admin' => false,
+                'hasAdviser' => $request->user()->studentProfile->hasActiveAdviser(),
             ]);
         }
 
@@ -199,9 +200,17 @@ class ResearchProposalController extends Controller
     public function create(
         Request $request
     ): View|RedirectResponse {
-        return $request->user()->studentProfile
-            ? view('student.proposal.create')
-            : $this->completeProfile();
+        $profile = $request->user()->studentProfile;
+
+        if (! $profile) {
+            return $this->completeProfile();
+        }
+
+        if ($profile->hasActiveAdviser()) {
+            return $this->uploadBlockedByAdviser();
+        }
+
+        return view('student.proposal.create');
     }
 
     public function store(
@@ -212,6 +221,11 @@ class ResearchProposalController extends Controller
     ): RedirectResponse {
         if (! $request->user()->studentProfile) {
             return $this->completeProfile();
+        }
+
+        // A student with an assigned adviser cannot upload another proposal.
+        if ($request->user()->studentProfile->hasActiveAdviser()) {
+            return $this->uploadBlockedByAdviser();
         }
 
         $proposal = $service->upload(
@@ -603,6 +617,13 @@ class ResearchProposalController extends Controller
             === $proposal->student_profile_id,
             404
         );
+    }
+
+    private function uploadBlockedByAdviser(): RedirectResponse
+    {
+        return redirect()
+            ->route('student.proposals.index')
+            ->with('status', 'proposal-upload-blocked');
     }
 
     private function completeProfile(): RedirectResponse

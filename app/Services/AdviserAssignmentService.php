@@ -50,8 +50,11 @@ class AdviserAssignmentService
             $request->active_slot = 1;
             $request->responded_at = now();
             $request->save();
+            // The student now has an adviser: remove the other pending requests for this proposal.
+            // They are cancelled and soft-deleted (the same result as the student's "Delete Request"),
+            // so they disappear from both lists while their history is retained.
             AdviserRequest::where('research_proposal_id', $proposal->id)->where('id', '!=', $request->id)->where('status', 'pending')
-                ->update(['status' => 'cancelled', 'active_slot' => null, 'responded_at' => now(), 'updated_at' => now()]);
+                ->update(['status' => 'cancelled', 'active_slot' => null, 'responded_at' => now(), 'deleted_at' => now(), 'updated_at' => now()]);
 
             app(AdviserRequestNotificationService::class)->afterCommit($request, AdviserRequestAcceptedNotification::class, 'studentProfile');
 

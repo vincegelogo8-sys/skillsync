@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdviserAssignment;
 use App\Models\AdviserRequest;
 use App\Models\FacultyProfile;
 use App\Models\ResearchProposal;
@@ -19,9 +20,13 @@ class AdviserRequestController extends Controller
     public function index(Request $request): View
     {
         $role = $request->user()->role;
-        $query = AdviserRequest::with(['studentProfile.user', 'facultyProfile.user', 'researchProposal']);
+        $query = AdviserRequest::with(['studentProfile.user', 'facultyProfile.user', 'researchProposal.assignment.facultyProfile.user']);
         if ($role === User::ROLE_STUDENT) {
             $query->where('student_profile_id', $request->user()->studentProfile?->id ?? 0);
+            // Once an adviser has accepted the proposal, requests that were closed because
+            // of it are not shown to the student. Only the accepted request remains.
+            $query->where(fn ($q) => $q->where('status', '!=', 'cancelled')
+                ->orWhereDoesntHave('researchProposal.assignment', fn ($a) => $a->where('status', AdviserAssignment::STATUS_ACTIVE)));
         } elseif ($role === User::ROLE_FACULTY) {
             $query->where('faculty_profile_id', $request->user()->facultyProfile?->id ?? 0);
         }

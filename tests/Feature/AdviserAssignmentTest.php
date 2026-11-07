@@ -81,7 +81,8 @@ class AdviserAssignmentTest extends TestCase
         $this->assertDatabaseCount('adviser_assignments', 0);
         $this->post('/faculty/requests/'.$selected->id.'/approve')->assertSessionHasNoErrors();
         $this->assertSame('approved', $selected->fresh()->status);
-        $this->assertSame('cancelled', $competitor->fresh()->status);
+        $this->assertSame('cancelled', AdviserRequest::withTrashed()->find($competitor->id)->status);
+        $this->assertSoftDeleted('adviser_requests', ['id' => $competitor->id]);
         $this->assertSame('pending', $unrelated->fresh()->status);
     }
 
@@ -128,16 +129,20 @@ class AdviserAssignmentTest extends TestCase
         $this->assertSame('approved', $request->fresh()->status);
         $this->assertSame(1, $request->fresh()->active_slot);
         $this->assertNotNull($request->fresh()->responded_at);
-        $this->assertSame('cancelled', $competitor->fresh()->status);
-        $this->assertNull($competitor->fresh()->active_slot);
-        $this->assertNotNull($competitor->fresh()->responded_at);
+        $removed = AdviserRequest::withTrashed()->find($competitor->id);
+        $this->assertSame('cancelled', $removed->status);
+        $this->assertNull($removed->active_slot);
+        $this->assertNotNull($removed->responded_at);
+        $this->assertSoftDeleted('adviser_requests', ['id' => $competitor->id]);
+        $this->assertSame(0, AdviserRequest::where('research_proposal_id', $proposal->id)->where('id', $competitor->id)->count());
         $this->assertSame(1, app(AdvisoryThresholdService::class)->forFaculties([$faculty])[$faculty->id]['load']);
         $this->assertSame($scores, $proposal->recommendations()->get()->toArray());
         $before = $assignment->toArray();
         $this->travel(1)->hour();
         $this->post($url)->assertRedirect('/faculty/assignments')->assertSessionHasNoErrors();
         $this->assertSame($before, $assignment->fresh()->toArray());
-        $this->actingAs($other->user)->post('/faculty/requests/'.$competitor->id.'/approve')->assertSessionHasErrors('assignment');
+        // The removed request is gone for the other adviser too, so it can no longer be approved.
+        $this->actingAs($other->user)->post('/faculty/requests/'.$competitor->id.'/approve')->assertNotFound();
         $this->assertDatabaseCount('adviser_assignments', 1);
         $this->actingAs($request->studentProfile->user)->get('/student/proposals/'.$proposal->id)->assertSee('Assigned Adviser')->assertSee($faculty->user->name);
     }

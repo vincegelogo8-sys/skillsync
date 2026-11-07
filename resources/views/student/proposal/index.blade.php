@@ -16,7 +16,7 @@
                 {{-- HEADER --}}
                 <div class="flex flex-wrap items-center justify-between gap-4">
 
-                    @unless ($admin)
+                    @unless ($admin || ($hasAdviser ?? false))
                         <a
                             href="{{ route('student.proposals.create') }}"
                             class=" button button-primary"
@@ -26,6 +26,25 @@
                     @endunless
 
                 </div>
+
+                {{-- UPLOAD LOCKED: STUDENT ALREADY HAS AN ADVISER --}}
+                @if (! $admin && ($hasAdviser ?? false))
+                    <div
+                        role="status"
+                        class="ui-alert mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800"
+                    >
+                        {{ __('You already have an assigned adviser, so you cannot upload another proposal.') }}
+                    </div>
+                @endif
+
+                @if (session('status') === 'proposal-upload-blocked')
+                    <div
+                        role="alert"
+                        class="ui-alert mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+                    >
+                        {{ __('Upload blocked: you already have an assigned adviser.') }}
+                    </div>
+                @endif
 
                 {{-- DELETE SUCCESS --}}
                 @if (session('status') === 'proposal-deleted')

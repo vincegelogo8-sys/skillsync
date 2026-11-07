@@ -31,4 +31,18 @@ class StudentProfile extends Model
     {
         return $this->hasMany(ResearchProposal::class);
     }
+
+    /**
+     * True when any of this student's proposals has an active adviser assignment.
+     * Completed or cancelled assignments do not count.
+     */
+    public function hasActiveAdviser(): bool
+    {
+        return AdviserAssignment::where('status', AdviserAssignment::STATUS_ACTIVE)
+            ->whereHas(
+                'researchProposal',
+                fn ($query) => $query->where('student_profile_id', $this->id)
+            )
+            ->exists();
+    }
 }
