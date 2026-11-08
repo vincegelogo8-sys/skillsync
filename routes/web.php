@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FacultyExpertiseController;
 use App\Http\Controllers\FacultyProfileController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\ResearchProposalController;
 use App\Http\Controllers\StudentProfileController;
@@ -461,6 +462,18 @@ Route::middleware(['auth', 'active'])
             [ProfileController::class, 'update']
         )
             ->name('profile.update');
+
+        Route::post(
+            '/profile/photo',
+            [ProfilePhotoController::class, 'update']
+        )
+            ->name('profile.photo.update');
+
+        Route::delete(
+            '/profile/photo',
+            [ProfilePhotoController::class, 'destroy']
+        )
+            ->name('profile.photo.destroy');
 
     });
 

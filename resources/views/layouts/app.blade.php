@@ -23,7 +23,7 @@
         <div class="app-shell">
             @include('layouts.navigation')
             <div class="app-main">
-                <header class="topbar">
+                <header class="topbar{{ isset($hero) ? ' topbar-hero' : '' }}" @isset($hero) style="--hero-photo: url('{{ asset('images/campus-hero-banner.jpg') }}')" @endisset>
                     <div class="topbar-heading">
                         <button type="button" class="button button-secondary menu-toggle" aria-controls="workspace-sidebar" aria-expanded="false" data-sidebar-toggle>
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
@@ -31,11 +31,15 @@
                             </svg>
                             <span data-sidebar-toggle-label>{{ __('Menu') }}</span>
                         </button>
-                        <p class="topbar-workspace">{{ ucfirst(Auth::user()->role) }} <span>{{ __('Workspace') }}</span></p>
+                        @isset($hero)
+                            {{ $hero }}
+                        @else
+                            <p class="topbar-workspace">{{ ucfirst(Auth::user()->role) }} <span>{{ __('Workspace') }}</span></p>
+                        @endisset
                     </div>
                     @include('layouts.account-menu')
                 </header>
-                <main id="main-content" class="page-content" tabindex="-1">
+                <main id="main-content" class="page-content{{ isset($hero) ? ' has-hero' : '' }}" tabindex="-1">
                     <x-page-header :description="$description ?? null">{{ $header ?? __('Dashboard') }}</x-page-header>
                     @foreach (['success', 'error', 'warning'] as $messageType)
                         @if (session($messageType))<x-alert :type="$messageType" class="mb-6">{{ session($messageType) }}</x-alert>@endif

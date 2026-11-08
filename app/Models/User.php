@@ -63,6 +63,26 @@ class User extends Authenticatable
         ];
     }
 
+    /** Public URL of the profile photo, or null so the avatar falls back to initials. */
+    public function profilePhotoUrl(): ?string
+    {
+        if (! $this->profile_photo_path) {
+            return null;
+        }
+
+        try {
+            $disk = config('filesystems.profile_photo_disk');
+
+            // The local public disk is served from /storage on whatever address the site is opened on,
+            // so it keeps working even when APP_URL does not match (for example XAMPP or a new domain).
+            return $disk === 'public'
+                ? asset('storage/'.ltrim($this->profile_photo_path, '/'))
+                : \Illuminate\Support\Facades\Storage::disk($disk)->url($this->profile_photo_path);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public function isActive(): bool
     {
         return $this->deactivated_at === null;

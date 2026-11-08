@@ -16,6 +16,12 @@ return [
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
+    | Disk that stores profile photos. Keep "public" locally. On hosts with a disk that is
+    | wiped on restart (such as Render's free plan) set PROFILE_PHOTO_DISK=s3 and fill in the AWS_* values.
+    */
+    'profile_photo_disk' => env('PROFILE_PHOTO_DISK', 'public'),
+
+    /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------

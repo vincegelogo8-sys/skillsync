@@ -27,6 +27,9 @@
 
                 </div>
 
+                {{-- UPLOAD BLOCKED: shown after clicking Upload Proposal when an adviser already accepted --}}
+                <x-input-error :messages="$errors->get('upload')" class="mt-6" />
+
                 {{-- DELETE SUCCESS --}}
                 @if (session('status') === 'proposal-deleted')
                     <div

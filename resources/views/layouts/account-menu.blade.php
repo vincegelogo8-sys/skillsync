@@ -1,8 +1,10 @@
 <details class="account-menu" data-dropdown>
     <summary class="account-trigger" aria-label="{{ __('Account menu for :name', ['name' => Auth::user()->name]) }}">
+        <x-user-avatar class="account-avatar" />
         <span class="account-name">{{ Auth::user()->name }}</span>
         <span class="account-role">{{ __(ucfirst(Auth::user()->role)) }}</span>
         <span class="account-mobile-label">{{ __('Account') }}</span>
+        <svg class="account-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" /></svg>
     </summary>
     <div class="account-panel">
         <div class="account-panel-header">

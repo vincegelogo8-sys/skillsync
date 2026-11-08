@@ -115,6 +115,7 @@ class DashboardSummaryService
         return [
             'role' => $role, 'roleLabel' => ucfirst($role), 'profileReady' => $role === User::ROLE_ADMIN || $profile !== null,
             'metrics' => $metrics,
+            'capacity' => $capacity,
             'allProposals' => $allProposals,
             'allProposalsTotal' => $allProposalsTotal,
             'allRequests' => $allRequests,

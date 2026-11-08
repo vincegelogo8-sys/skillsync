@@ -623,7 +623,10 @@ class ResearchProposalController extends Controller
     {
         return redirect()
             ->route('student.proposals.index')
-            ->with('status', 'proposal-upload-blocked');
+            ->with('status', 'proposal-upload-blocked')
+            ->withErrors([
+                'upload' => 'You cannot upload another proposal because your proposal already has an adviser assignment.',
+            ]);
     }
 
     private function completeProfile(): RedirectResponse
