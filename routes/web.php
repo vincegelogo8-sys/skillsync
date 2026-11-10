@@ -31,6 +31,16 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Public landing page for System Administrators. Signed-in users are sent to
+// their own dashboard; guests see the page and continue to the admin login.
+Route::get('/admin', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return view('admin.landing');
+})->name('admin.landing');
+
 Route::get(
     '/adviser-requests/{adviserRequest}/proposal',
     [AdviserRequestController::class, 'viewProposal']

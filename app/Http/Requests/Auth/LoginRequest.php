@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    public const ADMIN_ONLY_MESSAGE = 'Administrators must sign in through the Administrator Portal.';
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -39,7 +41,7 @@ class LoginRequest extends FormRequest
      *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(bool $adminPortal = false): void
     {
         $this->ensureIsNotRateLimited();
 
@@ -53,6 +55,25 @@ class LoginRequest extends FormRequest
         }
 
         $user = User::where('email', $credentials['email'])->first();
+
+        // Each portal only accepts its own accounts. /admin/login treats anyone who is not an
+        // admin like a wrong password; /login tells admins where to sign in instead.
+        if ($adminPortal && $user?->role !== User::ROLE_ADMIN) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.failed'),
+            ]);
+        }
+
+        if (! $adminPortal && $user?->role === User::ROLE_ADMIN) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => self::ADMIN_ONLY_MESSAGE,
+            ]);
+        }
+
         if ($user?->isDeactivated()) {
             RateLimiter::hit($this->throttleKey());
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,12 +14,16 @@ class EnsureAccountIsActive
 
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->isDeactivated()) {
+        $user = $request->user();
+
+        if ($user?->isDeactivated()) {
+            $loginRoute = $user->role === User::ROLE_ADMIN ? 'admin.login' : 'login';
+
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['email' => self::MESSAGE]);
+            return redirect()->route($loginRoute)->withErrors(['email' => self::MESSAGE]);
         }
 
         return $next($request);

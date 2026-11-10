@@ -35,7 +35,7 @@
             </header>
 
             <div id="main-content" class="landing-copy landing-container" tabindex="-1">
-                <h1>Match students with research advisers</h1>
+                <h1>Match Students with Research Advisers<h1>
                 <p>SKILLSYNC automates the assignment of faculty advisers to student research groups using intelligent matching. The system considers expertise, workload, and research focus to create optimal pairings.</p>
             </div>
         </div>

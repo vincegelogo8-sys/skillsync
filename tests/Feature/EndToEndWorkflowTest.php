@@ -32,10 +32,13 @@ class EndToEndWorkflowTest extends TestCase
     private function login(User $user, string $password): void
     {
         if (auth()->check()) {
-            $this->send('post', '/logout')->assertRedirect('/');
+            $wasAdmin = auth()->user()->role === User::ROLE_ADMIN;
+            $this->send('post', '/logout')->assertRedirect($wasAdmin ? '/admin' : '/');
         }
-        $this->get('/login')->assertOk();
-        $this->send('post', '/login', ['email' => $user->email, 'password' => $password])->assertSessionHasNoErrors()->assertRedirect('/dashboard');
+        $loginPath = $user->role === User::ROLE_ADMIN ? '/admin/login' : '/login';
+        $this->get($loginPath)->assertOk();
+        $this->send('post', $loginPath, ['email' => $user->email, 'password' => $password])->assertSessionHasNoErrors()
+            ->assertRedirect($user->role === User::ROLE_ADMIN ? '/admin/dashboard' : '/dashboard');
         $this->assertAuthenticatedAs($user);
         $this->get('/dashboard')->assertRedirect('/'.$user->role.'/dashboard');
     }
