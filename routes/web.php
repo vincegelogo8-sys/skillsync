@@ -487,4 +487,10 @@ Route::middleware(['auth', 'active'])
 
     });
 
+Route::get('/healthz', function () {
+    return response()->json([
+        'status' => 'ok'
+    ]);
+});
+
 require __DIR__.'/auth.php';
