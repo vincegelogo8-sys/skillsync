@@ -24,23 +24,6 @@
         $ringCaption = __('of proposals analyzed');
     }
 
-    $quickActions = match ($role) {
-        'admin' => [
-            ['route' => 'admin.accounts.create', 'label' => __('Add Account'), 'icon' => 'users'],
-            ['route' => 'admin.requests.index', 'label' => __('Adviser Requests'), 'icon' => 'inbox'],
-            ['route' => 'admin.advisory-limits.index', 'label' => __('Advisory Limits'), 'icon' => 'sliders'],
-        ],
-        'faculty' => [
-            ['route' => 'faculty.requests.index', 'label' => __('Adviser Requests'), 'icon' => 'inbox'],
-            ['route' => 'faculty.assignments.index', 'label' => __('Assigned Students'), 'icon' => 'graduation-cap'],
-            ['route' => 'faculty.expertise.index', 'label' => __('Faculty Skills'), 'icon' => 'sparkles'],
-        ],
-        default => [
-            ['route' => 'student.proposals.create', 'label' => __('Upload Proposal'), 'icon' => 'document'],
-            ['route' => 'student.requests.index', 'label' => __('Adviser Requests'), 'icon' => 'inbox'],
-            ['route' => 'student.profile.edit', 'label' => __('Student Profile'), 'icon' => 'user'],
-        ],
-    };
     $circumference = 2 * M_PI * 52;
 @endphp
 <x-app-layout>
@@ -92,18 +75,6 @@
                             </div>
                         @endforeach
                     </dl>
-                </div>
-            </section>
-
-            <section class="dash-card dash-quick" aria-labelledby="quick-title">
-                <h3 id="quick-title">{{ __('Quick Actions') }}</h3>
-                <div class="dash-quick-grid">
-                    @foreach ($quickActions as $action)
-                        <a href="{{ route($action['route']) }}" class="dash-quick-tile">
-                            <x-nav-icon :name="$action['icon']" />
-                            <span>{{ $action['label'] }}</span>
-                        </a>
-                    @endforeach
                 </div>
             </section>
 

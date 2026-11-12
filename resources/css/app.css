@@ -527,8 +527,7 @@ body.workspace .page-content.has-hero > .workspace-page-header { position: absol
 .dash-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border: 1px solid #fde68a; border-left: 5px solid var(--gold); border-radius: 14px; background: #fffbeb; color: #78350f; box-shadow: var(--shadow-sm); }
 .dash-notice p { margin: 0; font-weight: 600; }
 .dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 22px; }
-.dash-overview { grid-column: span 8; }
-.dash-quick { grid-column: span 4; }
+.dash-overview { grid-column: 1 / -1; }
 .dash-activity { grid-column: span 6; }
 .dash-card { padding: 22px 24px; border: 1px solid #dfe7f6; border-radius: 18px; background: linear-gradient(180deg, #fff 0%, #f7faff 100%); box-shadow: 0 10px 28px rgba(11,31,85,.12); }
 .dash-card h3 { margin: 0; color: var(--navy); font-size: 19px; font-weight: 800; line-height: 1.3; }
@@ -560,15 +559,6 @@ body.workspace .page-content.has-hero > .workspace-page-header { position: absol
 .dash-tile dd.is-text { font-size: 17px; line-height: 1.35; }
 .dash-tile-note { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 13px; font-weight: 500; }
 
-/* Quick actions: solid navy card with gold accents */
-.dash-quick { align-self: start; background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%); border-color: var(--navy-deep); border-bottom: 4px solid var(--gold); }
-.dash-quick h3 { margin-bottom: 16px; color: #fff; }
-.dash-quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; }
-.dash-quick-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 104px; padding: 14px 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; background: rgba(255,255,255,.09); color: #fff; font-size: 13px; font-weight: 700; line-height: 1.3; text-align: center; text-decoration: none; transition: background-color .15s, transform .15s; }
-.dash-quick-tile svg { width: 28px; height: 28px; color: var(--gold); }
-.dash-quick-tile:hover { background: rgba(255,255,255,.18); transform: translateY(-2px); }
-.dash-quick-tile:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-
 /* Recent activity as a timeline */
 .timeline, .timeline ul { margin: 0; padding: 0; list-style: none; }
 .timeline-group + .timeline-group { margin-top: 14px; }
@@ -585,7 +575,7 @@ a.timeline-title:hover { color: var(--accent-hover); text-decoration: underline;
 .dash-activity .empty-state { background: #f7faff; }
 
 @media (max-width: 1180px) {
-    .dash-overview, .dash-quick, .dash-activity { grid-column: 1 / -1; }
+    .dash-overview, .dash-activity { grid-column: 1 / -1; }
 }
 @media (max-width: 900px) {
     body.workspace .topbar-hero { padding: 20px 20px 76px; }

@@ -1,3 +1,4 @@
+
 <x-app-layout>
     <x-slot name="header">
         <h1 class="font-semibold text-xl text-gray-800">
@@ -5,23 +6,23 @@
         </h1>
     </x-slot>
 
-
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-
             <section class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
 
                 <a
                     href="{{ route(($admin ? 'admin' : 'student').'.proposals.index') }}"
-                    class=" button button-secondary"
+                    class="button button-secondary"
                 >
                     {{ __('Back to proposals') }}
                 </a>
 
                 @if (session('status') === 'proposal-analyzed')
-                    <x-alert type="success" class="mt-4">{{ __('Proposal analysis completed.') }}</x-alert>
+                    <x-alert type="success" class="mt-4">
+                        {{ __('Proposal analysis completed.') }}
+                    </x-alert>
                 @endif
-                {{-- SUCCESS MESSAGES --}}
+
                 @if (session('status') === 'proposal-uploaded')
                     <div
                         role="status"
@@ -49,20 +50,9 @@
                     </div>
                 @endif
 
-                <x-input-error
-                    :messages="$errors->get('delete')"
-                    class="mt-4"
-                />
-
-                <x-input-error
-                    :messages="$errors->get('extraction')"
-                    class="mt-4"
-                />
-
-                <x-input-error
-                    :messages="$errors->get('analysis')"
-                    class="mt-4"
-                />
+                <x-input-error :messages="$errors->get('delete')" class="mt-4" />
+                <x-input-error :messages="$errors->get('extraction')" class="mt-4" />
+                <x-input-error :messages="$errors->get('analysis')" class="mt-4" />
 
                 <h3 class="mt-6 text-xl font-medium text-gray-900 break-words">
                     {{ $proposal->title }}
@@ -70,14 +60,15 @@
 
                 {{-- ASSIGNED ADVISER --}}
                 @if ($proposal->assignment)
-                    <div
-                        class="mt-4 rounded border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900"
-                    >
+                    <div class="mt-4 rounded border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
                         <p class="font-semibold">
                             {{ __('Assigned Adviser') }}:
                             {{ $proposal->assignment->facultyProfile->user->name }}
+
                             @if ($proposal->assignment->facultyProfile->user->isDeactivated())
-                                <x-status-badge status="inactive">{{ __('Inactive') }}</x-status-badge>
+                                <x-status-badge status="inactive">
+                                    {{ __('Inactive') }}
+                                </x-status-badge>
                             @endif
                         </p>
 
@@ -168,73 +159,79 @@
 
                 {{-- RECOMMENDATIONS --}}
                 @if (auth()->user()->role === \App\Models\User::ROLE_STUDENT)
-                <a
-                    href="{{ route('student.recommendations.index', $proposal) }}"
-                    class="button button-primary mt-6"
-                >
-                    {{ __('View Adviser Recommendations') }}
-                </a>
+                    <a
+                        href="{{ route('student.recommendations.index', $proposal) }}"
+                        class="button button-primary mt-6"
+                    >
+                        {{ __('View Adviser Recommendations') }}
+                    </a>
                 @endif
 
-                {{-- ANALYSIS --}}
+                {{-- ANALYSIS AND EXTRACTED TEXT --}}
                 @if ($proposal->analysis)
 
                     @include(
                         'student.proposal.analysis',
-                        [
-                            'analysis' => $proposal->analysis
-                        ]
+                        ['analysis' => $proposal->analysis]
                     )
 
                     <div class="mt-8 border-t border-gray-200 pt-6">
+                        <h4 class="text-lg font-medium text-gray-900">
+                            {{ __('Extracted Document Text') }}
+                        </h4>
 
-                        <div class="flex flex-wrap items-center justify-between gap-3">
+                        @if (filled($proposal->analysis->extracted_text))
+                            <div
+                                class="mt-4 max-h-96 overflow-y-auto overflow-x-hidden rounded-md border border-gray-200 bg-gray-50 p-4 text-sm leading-7 text-gray-800 whitespace-pre-wrap break-words"
+                                tabindex="0"
+                                aria-label="Extracted proposal document text"
+                            >{{ $proposal->analysis->extracted_text }}</div>
+                        @else
+                            <p class="mt-4 text-sm text-gray-600">
+                                {{ __('The analysis record exists, but the extracted document text is empty.') }}
+                            </p>
 
-                            <div>
-                                <h4 class="text-lg font-medium text-gray-900">
-                                    {{ __('Extracted Document Text') }}
-                                </h4>
-                            </div>
+                            <form
+                                method="POST"
+                                action="{{ route(($admin ? 'admin' : 'student').'.proposals.refresh-extraction', $proposal) }}"
+                                class="mt-3"
+                            >
+                                @csrf
 
-                        </div>
-
-                        <div
-                            class="mt-4 max-h-96 overflow-auto rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap break-words"
-                        >{{ $proposal->analysis->extracted_text }}</div>
-
+                                <button type="submit" class="button button-secondary">
+                                    {{ __('Refresh Document Extraction') }}
+                                </button>
+                            </form>
+                        @endif
                     </div>
 
                 @else
 
-                    {{-- FIRST EXTRACTION / RETRY --}}
-                    <form
-                        method="POST"
-                        action="{{ route(($admin ? 'admin' : 'student').'.proposals.extract', $proposal) }}"
-                        class="mt-6"
-                    >
-                        @csrf
+                    <div class="mt-6">
+                        <p class="text-sm text-gray-600">
+                            {{ __('No extracted proposal text is available yet.') }}
+                        </p>
 
-                        <x-primary-button>
-                            {{ $proposal->extraction_error
-                                ? __('Retry Text Extraction')
-                                : __('Extract Document Text') }}
-                        </x-primary-button>
-                    </form>
+                        <form
+                            method="POST"
+                            action="{{ route(($admin ? 'admin' : 'student').'.proposals.extract', $proposal) }}"
+                            class="mt-3"
+                        >
+                            @csrf
 
-                    @unless ($admin)
-                        @if ($proposal->extraction_error)
-                            <a
-                                href="{{ route('student.proposals.create') }}"
-                                class="mt-3 inline-block text-sm text-indigo-600 underline"
-                            >
-                                {{ __('Upload a corrected document') }}
-                            </a>
-                        @endif
-                    @endunless
+                            <button type="submit" class="button button-primary">
+                                {{ __('Extract Document Text') }}
+                            </button>
+                        </form>
+                    </div>
 
                 @endif
 
-                <h2 class="mt-8 text-lg font-semibold text-gray-900">{{ __('Actions') }}</h2>
+                {{-- ACTIONS --}}
+                <h2 class="mt-8 text-lg font-semibold text-gray-900">
+                    {{ __('Actions') }}
+                </h2>
+
                 <div class="mt-6 flex flex-wrap items-center gap-3">
 
                     @if ($admin)
@@ -250,34 +247,33 @@
                     <form
                         method="POST"
                         action="{{ route(($admin ? 'admin' : 'student').'.proposals.refresh-extraction', $proposal) }}"
-                        data-confirm="Re-extract and reanalyze this proposal? Existing recommendations will be updated." data-confirm-title="Re-analyze proposal?" data-confirm-button="Yes, re-analyze" data-confirm-tone="primary"
+                        data-confirm="Re-extract and reanalyze this proposal? Existing recommendations will be updated."
+                        data-confirm-title="Re-analyze proposal?"
+                        data-confirm-button="Yes, re-analyze"
+                        data-confirm-tone="primary"
                     >
                         @csrf
 
-                        <button
-                            type="submit"
-                            class="button button-secondary"
-                        >
+                        <button type="submit" class="button button-secondary">
                             {{ __('Refresh / Reanalyze') }}
                         </button>
                     </form>
 
                     {{-- DELETE - STUDENT ONLY --}}
                     @unless ($admin)
-
-                        @if (! $proposal->assignment)
+                        @if (!$proposal->assignment)
                             <form
                                 method="POST"
                                 action="{{ route('student.proposals.destroy', $proposal) }}"
-                                data-confirm="Are you sure you want to permanently delete this proposal? The uploaded document, analysis, recommendations, and related adviser requests will also be deleted. This action cannot be undone." data-confirm-title="Delete proposal?" data-confirm-button="Yes, delete" data-confirm-tone="danger"
+                                data-confirm="Are you sure you want to permanently delete this proposal? The uploaded document, analysis, recommendations, and related adviser requests will also be deleted."
+                                data-confirm-title="Delete proposal?"
+                                data-confirm-button="Yes, delete"
+                                data-confirm-tone="danger"
                             >
                                 @csrf
                                 @method('DELETE')
 
-                                <button
-                                    type="submit"
-                                    class="button button-danger"
-                                >
+                                <button type="submit" class="button button-danger">
                                     {{ __('Delete Proposal') }}
                                 </button>
                             </form>
@@ -291,13 +287,10 @@
                                 {{ __('Delete Proposal') }}
                             </button>
                         @endif
-
                     @endunless
 
                 </div>
-
             </section>
-
         </div>
     </div>
 </x-app-layout>

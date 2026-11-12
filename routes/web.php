@@ -8,6 +8,7 @@ use App\Http\Controllers\AdvisoryThresholdController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FacultyExpertiseController;
 use App\Http\Controllers\FacultyProfileController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfilePhotoController;
 use App\Http\Controllers\RecommendationController;
@@ -31,8 +32,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Public landing page for System Administrators. Signed-in users are sent to
-// their own dashboard; guests see the page and continue to the admin login.
+// Public landing page for System Administrators.
 Route::get('/admin', function () {
     if (auth()->check()) {
         return redirect()->route('dashboard');
@@ -69,53 +69,46 @@ Route::middleware([
     ->prefix('student')
     ->name('student.')
     ->group(function () {
+
         Route::get(
             '/dashboard',
             [DashboardController::class, 'show']
-        )
-            ->name('dashboard');
+        )->name('dashboard');
 
         Route::get(
             '/requests',
             [AdviserRequestController::class, 'index']
-        )
-            ->name('requests.index');
+        )->name('requests.index');
 
         Route::get(
             '/assignments',
             [AdviserAssignmentController::class, 'index']
-        )
-            ->name('assignments.index');
+        )->name('assignments.index');
 
         Route::post(
             '/proposals/{proposal}/requests/{facultyProfile}',
             [AdviserRequestController::class, 'store']
-        )
-            ->name('requests.store');
+        )->name('requests.store');
 
         Route::patch(
             '/requests/{adviserRequest}/cancel',
             [AdviserRequestController::class, 'cancel']
-        )
-            ->name('requests.cancel');
+        )->name('requests.cancel');
 
         Route::delete(
             '/requests/{adviserRequest}',
             [AdviserRequestController::class, 'destroy']
-        )
-            ->name('requests.destroy');
+        )->name('requests.destroy');
 
         Route::get(
             '/profile',
             [StudentProfileController::class, 'edit']
-        )
-            ->name('profile.edit');
+        )->name('profile.edit');
 
         Route::patch(
             '/profile',
             [StudentProfileController::class, 'update']
-        )
-            ->name('profile.update');
+        )->name('profile.update');
 
         /*
         |--------------------------------------------------------------------------
@@ -126,75 +119,55 @@ Route::middleware([
         Route::get(
             '/proposals',
             [ResearchProposalController::class, 'index']
-        )
-            ->name('proposals.index');
+        )->name('proposals.index');
 
         Route::get(
             '/proposals/create',
             [ResearchProposalController::class, 'create']
-        )
-            ->name('proposals.create');
+        )->name('proposals.create');
 
         Route::post(
             '/proposals',
             [ResearchProposalController::class, 'store']
-        )
-            ->name('proposals.store');
+        )->name('proposals.store');
 
         Route::get(
             '/proposals/{proposal}',
             [ResearchProposalController::class, 'show']
-        )
-            ->name('proposals.show');
+        )->name('proposals.show');
 
         Route::post(
             '/proposals/{proposal}/extract',
             [ResearchProposalController::class, 'extract']
-        )
-            ->name('proposals.extract');
+        )->name('proposals.extract');
 
-        /*
-         * NEW:
-         * Re-extract the existing uploaded document.
-         */
         Route::post(
             '/proposals/{proposal}/refresh-extraction',
             [
                 ResearchProposalController::class,
                 'refreshExtraction',
             ]
-        )
-            ->name(
-                'proposals.refresh-extraction'
-            );
+        )->name('proposals.refresh-extraction');
 
         Route::post(
             '/proposals/{proposal}/analyze',
             [ResearchProposalController::class, 'analyze']
-        )
-            ->name('proposals.analyze');
+        )->name('proposals.analyze');
 
-        /*
-         * NEW:
-         * Delete student's own proposal.
-         */
         Route::delete(
             '/proposals/{proposal}',
             [ResearchProposalController::class, 'destroy']
-        )
-            ->name('proposals.destroy');
+        )->name('proposals.destroy');
 
         Route::get(
             '/proposals/{proposal}/recommendations',
             [RecommendationController::class, 'index']
-        )
-            ->name('recommendations.index');
+        )->name('recommendations.index');
 
         Route::post(
             '/proposals/{proposal}/recommendations',
             [RecommendationController::class, 'generate']
-        )
-            ->name('recommendations.generate');
+        )->name('recommendations.generate');
     });
 
 /*
@@ -211,90 +184,76 @@ Route::middleware([
     ->prefix('faculty')
     ->name('faculty.')
     ->group(function () {
+
         Route::get(
             '/dashboard',
             [DashboardController::class, 'show']
-        )
-            ->name('dashboard');
+        )->name('dashboard');
 
         Route::get(
             '/requests',
             [AdviserRequestController::class, 'index']
-        )
-            ->name('requests.index');
+        )->name('requests.index');
 
         Route::get(
             '/assignments',
             [AdviserAssignmentController::class, 'index']
-        )
-            ->name('assignments.index');
+        )->name('assignments.index');
 
         Route::get(
             '/assignments/{assignment}/proposal',
             [AdviserAssignmentController::class, 'viewAssignmentProposal']
-        )
-            ->name('assignments.proposal');
+        )->name('assignments.proposal');
 
         Route::post(
             '/requests/{adviserRequest}/approve',
             [AdviserAssignmentController::class, 'approve']
-        )
-            ->name('requests.approve');
+        )->name('requests.approve');
 
         Route::patch(
             '/requests/{adviserRequest}/decline',
             [AdviserRequestController::class, 'decline']
-        )
-            ->name('requests.decline');
+        )->name('requests.decline');
 
         Route::get(
             '/profile',
             [FacultyProfileController::class, 'edit']
-        )
-            ->name('profile.edit');
+        )->name('profile.edit');
 
         Route::patch(
             '/profile',
             [FacultyProfileController::class, 'update']
-        )
-            ->name('profile.update');
+        )->name('profile.update');
 
         Route::get(
             '/expertise',
             [FacultyExpertiseController::class, 'index']
-        )
-            ->name('expertise.index');
+        )->name('expertise.index');
 
         Route::put(
             '/expertise',
             [FacultyExpertiseController::class, 'updateSkills']
-        )
-            ->name('expertise.skills.update');
+        )->name('expertise.skills.update');
 
         Route::post(
             '/expertise',
             [FacultyExpertiseController::class, 'store']
-        )
-            ->name('expertise.store');
+        )->name('expertise.store');
 
         Route::get(
             '/expertise/{expertise}/edit',
             [FacultyExpertiseController::class, 'edit']
-        )
-            ->name('expertise.edit');
+        )->name('expertise.edit');
 
         Route::patch(
             '/expertise/{expertise}',
             [FacultyExpertiseController::class, 'update']
-        )
-            ->name('expertise.update');
+        )->name('expertise.update');
 
         Route::delete(
             '/expertise/{expertise}',
             [FacultyExpertiseController::class, 'destroy']
-        )
-            ->name('expertise.destroy');
-
+        )->name('expertise.destroy');
     });
 
 /*
@@ -311,95 +270,81 @@ Route::middleware([
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+
         Route::get(
             '/dashboard',
             [DashboardController::class, 'show']
-        )
-            ->name('dashboard');
+        )->name('dashboard');
 
         Route::get(
             '/requests',
             [AdviserRequestController::class, 'index']
-        )
-            ->name('requests.index');
+        )->name('requests.index');
 
         Route::get(
             '/assignments',
             [AdviserAssignmentController::class, 'index']
-        )
-            ->name('assignments.index');
+        )->name('assignments.index');
 
         Route::get(
             '/history',
             [HistoryController::class, 'index']
-        )
-            ->name('history.index');
+        )->name('history.index');
 
         Route::get(
             '/advisory-limits',
             [AdvisoryThresholdController::class, 'index']
-        )
-            ->name('advisory-limits.index');
+        )->name('advisory-limits.index');
 
         Route::get(
             '/faculty/{facultyProfile}/advisory-limit',
             [AdvisoryThresholdController::class, 'edit']
-        )
-            ->name('advisory-limits.edit');
+        )->name('advisory-limits.edit');
 
         Route::patch(
             '/faculty/{facultyProfile}/advisory-limit',
             [AdvisoryThresholdController::class, 'update']
-        )
-            ->name('advisory-limits.update');
+        )->name('advisory-limits.update');
 
         Route::get(
             '/accounts',
             [AccountController::class, 'index']
-        )
-            ->name('accounts.index');
+        )->name('accounts.index');
 
         Route::get(
             '/accounts/create',
             [AccountController::class, 'create']
-        )
-            ->name('accounts.create');
+        )->name('accounts.create');
 
         Route::post(
             '/accounts',
             [AccountController::class, 'store']
-        )
-            ->name('accounts.store');
+        )->name('accounts.store');
 
         Route::get(
             '/accounts/{account}/edit',
             [AccountController::class, 'edit']
-        )
-            ->name('accounts.edit');
+        )->name('accounts.edit');
 
         Route::patch(
             '/accounts/{account}',
             [AccountController::class, 'update']
-        )
-            ->name('accounts.update');
+        )->name('accounts.update');
 
         Route::patch(
             '/accounts/{account}/deactivate',
             [AccountController::class, 'deactivate']
-        )
-            ->name('accounts.deactivate');
+        )->name('accounts.deactivate');
 
         Route::patch(
             '/accounts/{account}/activate',
             [AccountController::class, 'activate']
-        )
-            ->name('accounts.activate');
+        )->name('accounts.activate');
 
         Route::post(
             '/accounts/bulk-status',
             [AccountController::class, 'bulkStatus']
-        )
-            ->name('accounts.bulk-status');
+        )->name('accounts.bulk-status');
 
         /*
         |--------------------------------------------------------------------------
@@ -410,86 +355,88 @@ Route::middleware([
         Route::get(
             '/proposals',
             [ResearchProposalController::class, 'index']
-        )
-            ->name('proposals.index');
+        )->name('proposals.index');
 
         Route::get(
             '/proposals/{proposal}',
             [ResearchProposalController::class, 'show']
-        )
-            ->name('proposals.show');
+        )->name('proposals.show');
 
         Route::get(
             '/proposals/{proposal}/download',
             [ResearchProposalController::class, 'download']
-        )
-            ->name('proposals.download');
+        )->name('proposals.download');
 
         Route::post(
             '/proposals/{proposal}/extract',
             [ResearchProposalController::class, 'extract']
-        )
-            ->name('proposals.extract');
+        )->name('proposals.extract');
 
-        /*
-         * Admin can also refresh extraction.
-         */
         Route::post(
             '/proposals/{proposal}/refresh-extraction',
             [
                 ResearchProposalController::class,
                 'refreshExtraction',
             ]
-        )
-            ->name(
-                'proposals.refresh-extraction'
-            );
+        )->name('proposals.refresh-extraction');
 
         Route::post(
             '/proposals/{proposal}/analyze',
             [ResearchProposalController::class, 'analyze']
-        )
-            ->name('proposals.analyze');
-
+        )->name('proposals.analyze');
     });
 
 /*
 |--------------------------------------------------------------------------
-| Account Profile
+| Account Profile and Notifications
 |--------------------------------------------------------------------------
 */
 
 Route::middleware(['auth', 'active'])
     ->group(function () {
+
+        // Notification routes
+        Route::patch(
+            '/notifications/{notification}/read',
+            [NotificationController::class, 'markAsRead']
+        )->name('notifications.read');
+
+        Route::patch(
+            '/notifications/read-all',
+            [NotificationController::class, 'markAllAsRead']
+        )->name('notifications.read-all');
+
+        // Account profile routes
         Route::get(
             '/profile',
             [ProfileController::class, 'edit']
-        )
-            ->name('profile.edit');
+        )->name('profile.edit');
 
         Route::patch(
             '/profile',
             [ProfileController::class, 'update']
-        )
-            ->name('profile.update');
+        )->name('profile.update');
 
         Route::post(
             '/profile/photo',
             [ProfilePhotoController::class, 'update']
-        )
-            ->name('profile.photo.update');
+        )->name('profile.photo.update');
 
         Route::delete(
             '/profile/photo',
             [ProfilePhotoController::class, 'destroy']
-        )
-            ->name('profile.photo.destroy');
-
+        )->name('profile.photo.destroy');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Health Check
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/healthz', function () {
     return response()->json([
-        'status' => 'ok'
+        'status' => 'ok',
     ]);
 });
 
